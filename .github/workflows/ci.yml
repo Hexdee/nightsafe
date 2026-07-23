@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Compact compiler
+        run: npm install -g @midnight-ntwrk/compact-compiler
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile Compact contract
+        run: npm run compile
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build

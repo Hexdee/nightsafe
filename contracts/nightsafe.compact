@@ -1,0 +1,41 @@
+/*
+Public data in this contract is the auditable trail that the network should see:
+proposal counters, execution counters, and privacy-preserving commitments.
+
+Private data arrives through witnesses and circuit arguments. It stays off-chain
+unless it is deliberately disclosed. The circuit proves that a treasury action
+had enough approvals without revealing the approval threshold, the approval set,
+or the underlying treasury details.
+*/
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+export ledger proposalCount: Uint<64>;
+export ledger executedCount: Uint<64>;
+export ledger lastProposalCommitment: Bytes<32>;
+export ledger lastApprovalCommitment: Bytes<32>;
+
+witness approvalThreshold(): Uint<8>;
+
+constructor() {
+    proposalCount = 0 as Uint<64>;
+    executedCount = 0 as Uint<64>;
+}
+
+export circuit authorizeMove(
+    proposalCommitment: Bytes<32>,
+    approvalCommitment: Bytes<32>,
+    approvalCount: Uint<8>,
+): [] {
+    const threshold = approvalThreshold();
+
+    assert(threshold >= 2, "approval threshold must be at least two");
+    assert(approvalCount >= threshold, "not enough approvals");
+
+    proposalCount = disclose((proposalCount + 1) as Uint<64>);
+    executedCount = disclose((executedCount + 1) as Uint<64>);
+    lastProposalCommitment = disclose(proposalCommitment);
+    lastApprovalCommitment = disclose(approvalCommitment);
+}

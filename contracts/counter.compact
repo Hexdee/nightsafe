@@ -1,0 +1,25 @@
+/*
+Public state on this contract is stored in the ledger and visible to everyone.
+Private data arrives through witness functions and stays off-chain unless it is
+explicitly disclosed with `disclose()`.
+*/
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+export ledger count: Uint<64>;
+
+witness privateLimit(): Uint<64>;
+
+constructor() {
+    count = 0 as Uint<64>;
+}
+
+export circuit increment(delta: Uint<64>): [] {
+    const limit = privateLimit();
+    assert(delta > 0, "delta must be greater than zero");
+    assert(delta <= limit, "delta exceeds the private limit");
+
+    count = disclose((count + delta) as Uint<64>);
+}
