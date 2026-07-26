@@ -16,6 +16,7 @@
     "preview:web": "vite preview",
     "preflight": "npx tsx scripts/preflight.ts",
     "status": "npx tsx scripts/status.ts",
+    "check:proof-server": "npx tsx scripts/check-proof-server.ts",
     "setup": "npx tsx src/setup.ts",
     "deploy": "npx tsx src/deploy.ts",
     "cli": "npx tsx src/cli.ts",
