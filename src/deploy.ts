@@ -6,6 +6,7 @@
  * No readline prompts, no .midnight-seed file.
  */
 import * as fs from 'node:fs';
+import * as net from 'node:net';
 import * as path from 'node:path';
 import { resolveNetwork, getOrCreateSeed, recordDeployment } from './network';
 import { createWallet, persistWalletState, unshieldedToken, type WalletContext } from './wallet';
@@ -44,11 +45,26 @@ const SEED = getOrCreateSeed(network);
 // that needs proofs.
 
 async function waitForProofServer(maxAttempts = 60, delayMs = 2000): Promise<boolean> {
+  const proofServerUrl = new URL(networkConfig.proofServer);
+  const port = Number(proofServerUrl.port || '80');
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      await fetch(networkConfig.proofServer, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000),
+      await new Promise<void>((resolve, reject) => {
+        const socket = net.createConnection({
+          host: proofServerUrl.hostname,
+          port,
+        });
+        const fail = (err: Error) => {
+          socket.destroy();
+          reject(err);
+        };
+        socket.setTimeout(3000);
+        socket.once('connect', () => {
+          socket.end();
+          resolve();
+        });
+        socket.once('timeout', () => fail(new Error('connection timed out')));
+        socket.once('error', fail);
       });
       return true;
     } catch (err: any) {
@@ -63,6 +79,61 @@ async function waitForProofServer(maxAttempts = 60, delayMs = 2000): Promise<boo
     }
   }
   return false;
+}
+
+type SyncedState = Awaited<ReturnType<WalletContext['wallet']['waitForSyncedState']>>;
+
+async function waitForWalletSync(walletCtx: WalletContext, timeoutMs: number): Promise<SyncedState> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  let diagnosticsDone = false;
+  let diagnosticsRunning = false;
+  const syncPromise = walletCtx.wallet.waitForSyncedState().finally(() => {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+    diagnosticsDone = true;
+  });
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      diagnosticsDone = true;
+      reject(new Error(`Wallet sync timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+    }, timeoutMs);
+  });
+
+  void (async () => {
+    while (!diagnosticsDone) {
+      await new Promise((resolve) => setTimeout(resolve, 30000));
+      if (diagnosticsDone || diagnosticsRunning) continue;
+      diagnosticsRunning = true;
+      try {
+        const state = await Rx.firstValueFrom(walletCtx.wallet.state());
+        const snapshot = {
+          isSynced: state.isSynced,
+          shieldedCoins: (state as any).shielded?.availableCoins?.length ?? 0,
+          unshieldedCoins: (state as any).unshielded?.availableCoins?.length ?? 0,
+          dustCoins: (state as any).dust?.availableCoins?.length ?? 0,
+          dustReady: (state as any).dust?.balance?.(new Date())?.toString?.() ?? '0',
+        };
+        console.log(`\n  Sync diagnostics: ${JSON.stringify(snapshot)}`);
+      } catch (diagnosticErr) {
+        console.log(`\n  Sync diagnostics error: ${diagnosticErr instanceof Error ? diagnosticErr.message : String(diagnosticErr)}`);
+      } finally {
+        diagnosticsRunning = false;
+      }
+    }
+  })();
+
+  try {
+    return (await Promise.race([syncPromise, timeoutPromise])) as SyncedState;
+  } catch (err) {
+    const state = await Rx.firstValueFrom(walletCtx.wallet.state());
+    const summary = {
+      isSynced: state.isSynced,
+      dustReady: state.dust.balance(new Date()).toString(),
+      tNight: state.unshielded.balances[unshieldedToken().raw]?.toString() ?? '0',
+    };
+    console.error('\n  Wallet sync did not finish.');
+    console.error(`  State snapshot: ${JSON.stringify(summary)}`);
+    throw err;
+  }
 }
 
 // ─── Compiled contract loading ─────────────────────────────────────────────────
@@ -137,7 +208,12 @@ async function main() {
 
   console.log('─── Wallet setup ───────────────────────────────────────────────\n');
   console.log('  Creating wallet...');
-  const walletCtx = await createWallet({ network, networkConfig, seed });
+  const walletCtx = await createWallet({
+    network,
+    networkConfig,
+    seed,
+    restore: process.env.MIDNIGHT_WALLET_FRESH === '1' ? false : true,
+  });
   const restoredCount = Object.values(walletCtx.restored).filter(Boolean).length;
   if (restoredCount > 0) {
     console.log(`  Restored ${restoredCount}/3 child wallets from .midnight-wallet-state — sync will resume from saved point.`);
@@ -151,7 +227,10 @@ async function main() {
     const elapsed = Math.round((Date.now() - syncStart) / 1000);
     process.stdout.write(`\r  ⏳ Still syncing... (${elapsed}s elapsed)   `);
   }, 5000);
-  const state = await walletCtx.wallet.waitForSyncedState();
+  const rawSyncTimeout = Number(process.env.MIDNIGHT_WALLET_SYNC_TIMEOUT_MS);
+  const syncTimeoutMs = Number.isFinite(rawSyncTimeout) && rawSyncTimeout > 0 ? rawSyncTimeout : 45 * 60 * 1000;
+  const statePromise = waitForWalletSync(walletCtx, syncTimeoutMs);
+  const state = await statePromise;
   clearInterval(syncInterval);
   process.stdout.write('\r  ✓ Synced with network.                                      \n');
 
