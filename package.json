@@ -14,6 +14,7 @@
     "prebuild": "npm run sync:web-assets",
     "build": "vite build",
     "preview:web": "vite preview",
+    "preflight": "npx tsx scripts/preflight.ts",
     "setup": "npx tsx src/setup.ts",
     "deploy": "npx tsx src/deploy.ts",
     "cli": "npx tsx src/cli.ts",
