@@ -19,6 +19,9 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Preflight checks
+        run: npm run preflight
+
       - name: Install Compact compiler
         run: npm install -g @midnight-ntwrk/compact-compiler
 
