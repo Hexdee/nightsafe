@@ -1,5 +1,5 @@
 # NightSafe
-![CI](https://github.com/OWNER/nightsafe/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/hexdee/nightsafe/actions/workflows/ci.yml/badge.svg)
 > A private multisig treasury app for teams that need Safe-style coordination on Midnight.
 
 ## Live Demo
