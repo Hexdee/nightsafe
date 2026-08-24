@@ -82,7 +82,7 @@ function deserializeFinalTx(tx: string) {
 }
 
 async function loadNightSafeContract() {
-  return import('../../contracts/managed/nightsafe/contract/index.js');
+  return import(/* @vite-ignore */ `${window.location.origin}/contracts/managed/nightsafe/contract/index.js`);
 }
 
 function requireServiceUrl(value: string, label: string, protocols: readonly string[]): string {
@@ -156,7 +156,7 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
 
   const NightSafeContract = await loadNightSafeContract();
   const compiledContract = CompiledContract.make('nightsafe', NightSafeContract.Contract).pipe(
-    CompiledContract.withWitnesses(witnesses),
+    CompiledContract.withWitnesses(witnesses as never),
     CompiledContract.withCompiledFileAssets(zkBaseUrl),
   );
 
