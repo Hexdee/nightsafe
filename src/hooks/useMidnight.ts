@@ -37,7 +37,7 @@ function discoverWallets(): WalletEntry[] {
 
 async function readLedgerSnapshot(stateValue: unknown): Promise<TreasuryLedgerSnapshot | null> {
   if (!stateValue) return null;
-  const NightSafe = await import('../../contracts/managed/nightsafe/contract/index.js');
+  const NightSafe = await import(/* @vite-ignore */ `${window.location.origin}/contracts/managed/nightsafe/contract/index.js`);
   const ledgerState = NightSafe.ledger(stateValue as never);
 
   return {

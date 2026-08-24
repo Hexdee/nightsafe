@@ -20,6 +20,14 @@ function copyRecursive(src: string, dst: string): void {
   fs.copyFileSync(src, dst);
 }
 
+if (!fs.existsSync(source)) {
+  if (!fs.existsSync(target)) {
+    throw new Error(`Missing generated contract assets at ${source}`);
+  }
+  console.log(`Using checked-in browser assets at ${path.relative(root, target)}`);
+  process.exit(0);
+}
+
 fs.rmSync(target, { recursive: true, force: true });
 for (const directory of browserAssetDirectories) {
   copyRecursive(path.join(source, directory), path.join(target, directory));
