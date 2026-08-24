@@ -22,7 +22,7 @@ jobs:
       - name: Setup Compact toolchain
         uses: midnightntwrk/setup-compact-action@836895c8fffbbea6bd986af2b17e8941ff29d1f8
         with:
-          compact-version: '0.30.0'
+          compact-version: '0.25.0'
 
       - name: Preflight checks
         run: npm run preflight
