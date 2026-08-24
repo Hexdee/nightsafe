@@ -31,7 +31,7 @@ jobs:
         run: npm install
 
       - name: Compile Compact contract
-        run: npm run compile
+        run: compact compile --skip-zk contracts/nightsafe.compact contracts/managed/nightsafe
 
       - name: Run tests
         run: npm test
