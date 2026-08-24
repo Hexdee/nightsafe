@@ -30,7 +30,10 @@ if (!fs.existsSync(source)) {
 
 fs.rmSync(target, { recursive: true, force: true });
 for (const directory of browserAssetDirectories) {
-  copyRecursive(path.join(source, directory), path.join(target, directory));
+  const sourceDirectory = path.join(source, directory);
+  if (fs.existsSync(sourceDirectory)) {
+    copyRecursive(sourceDirectory, path.join(target, directory));
+  }
 }
 
 console.log(`Synced managed proof assets to ${path.relative(root, target)}`);
