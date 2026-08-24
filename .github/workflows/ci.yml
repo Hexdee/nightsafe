@@ -28,7 +28,7 @@ jobs:
         run: npm run preflight
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Compile Compact contract
         run: npm run compile
