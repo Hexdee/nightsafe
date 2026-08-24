@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'contracts', 'managed', 'nightsafe');
 const target = path.join(root, 'public', 'contracts', 'managed', 'nightsafe');
-const browserAssetDirectories = ['keys', 'zkir'] as const;
+const browserAssetDirectories = ['compiler', 'contract', 'keys', 'zkir'] as const;
 
 function copyRecursive(src: string, dst: string): void {
   const stat = fs.statSync(src);
