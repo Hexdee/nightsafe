@@ -6,7 +6,6 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import * as ledger from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
-import * as NightSafeContract from '../../contracts/managed/nightsafe/contract/index.js';
 import { createNightSafePrivateState, witnesses } from '../witnesses.js';
 import {
   CONTRACT_ADDRESS,
@@ -82,6 +81,26 @@ function deserializeFinalTx(tx: string) {
   return ledger.Transaction.deserialize('signature', 'proof', 'binding', decodeTransactionPayload(tx));
 }
 
+async function loadNightSafeContract() {
+  return import('../../contracts/managed/nightsafe/contract/index.js');
+}
+
+function requireServiceUrl(value: string, label: string, protocols: readonly string[]): string {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${label} returned by the wallet is not a valid absolute URL: ${value || '(empty)'}`);
+  }
+
+  if (!protocols.includes(url.protocol)) {
+    throw new Error(`${label} must use ${protocols.join(' or ')}, but received ${url.protocol}`);
+  }
+
+  return url.toString();
+}
+
 export async function connectNightSafeSession(api: ConnectedAPI): Promise<BrowserSession> {
   const connectionStatus = await api.getConnectionStatus();
   if (connectionStatus.status !== 'connected') {
@@ -102,9 +121,14 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
   const shielded = await api.getShieldedAddresses();
   const unshielded = await api.getUnshieldedAddress();
 
-  const zkConfigProvider = new FetchZkConfigProvider(CONTRACT_ZK_BASE_URL, window.fetch.bind(window));
-  const proofProvider = httpClientProofProvider(LOCAL_PROOF_SERVER_URL, zkConfigProvider);
-  const publicDataProvider = indexerPublicDataProvider(configuration.indexerUri, configuration.indexerWsUri);
+  const zkBaseUrl = new URL(CONTRACT_ZK_BASE_URL, window.location.origin).toString();
+  const proofServerUrl = requireServiceUrl(LOCAL_PROOF_SERVER_URL, 'NightSafe proof server URL', ['http:', 'https:']);
+  const indexerUrl = requireServiceUrl(configuration.indexerUri, 'Indexer HTTP URL', ['http:', 'https:']);
+  const indexerWsUrl = requireServiceUrl(configuration.indexerWsUri, 'Indexer WebSocket URL', ['ws:', 'wss:']);
+
+  const zkConfigProvider = new FetchZkConfigProvider(zkBaseUrl, window.fetch.bind(window));
+  const proofProvider = httpClientProofProvider(proofServerUrl, zkConfigProvider);
+  const publicDataProvider = indexerPublicDataProvider(indexerUrl, indexerWsUrl);
   const privateStateProvider = createInMemoryPrivateStateProvider();
 
   if (!CONTRACT_ADDRESS) {
@@ -130,9 +154,10 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
     },
   };
 
+  const NightSafeContract = await loadNightSafeContract();
   const compiledContract = CompiledContract.make('nightsafe', NightSafeContract.Contract).pipe(
     CompiledContract.withWitnesses(witnesses),
-    CompiledContract.withCompiledFileAssets(CONTRACT_ZK_BASE_URL),
+    CompiledContract.withCompiledFileAssets(zkBaseUrl),
   );
 
   const providers = {

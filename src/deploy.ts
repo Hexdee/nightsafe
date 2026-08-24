@@ -83,19 +83,11 @@ async function waitForProofServer(maxAttempts = 60, delayMs = 2000): Promise<boo
 
 type SyncedState = Awaited<ReturnType<WalletContext['wallet']['waitForSyncedState']>>;
 
-async function waitForWalletSync(walletCtx: WalletContext, timeoutMs: number): Promise<SyncedState> {
-  let timeoutHandle: NodeJS.Timeout | undefined;
+async function waitForWalletSync(walletCtx: WalletContext): Promise<SyncedState> {
   let diagnosticsDone = false;
   let diagnosticsRunning = false;
   const syncPromise = walletCtx.wallet.waitForSyncedState().finally(() => {
-    if (timeoutHandle) clearTimeout(timeoutHandle);
     diagnosticsDone = true;
-  });
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      diagnosticsDone = true;
-      reject(new Error(`Wallet sync timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
-    }, timeoutMs);
   });
 
   void (async () => {
@@ -121,19 +113,7 @@ async function waitForWalletSync(walletCtx: WalletContext, timeoutMs: number): P
     }
   })();
 
-  try {
-    return (await Promise.race([syncPromise, timeoutPromise])) as SyncedState;
-  } catch (err) {
-    const state = await Rx.firstValueFrom(walletCtx.wallet.state());
-    const summary = {
-      isSynced: state.isSynced,
-      dustReady: state.dust.balance(new Date()).toString(),
-      tNight: state.unshielded.balances[unshieldedToken().raw]?.toString() ?? '0',
-    };
-    console.error('\n  Wallet sync did not finish.');
-    console.error(`  State snapshot: ${JSON.stringify(summary)}`);
-    throw err;
-  }
+  return (await syncPromise) as SyncedState;
 }
 
 // ─── Compiled contract loading ─────────────────────────────────────────────────
@@ -227,9 +207,7 @@ async function main() {
     const elapsed = Math.round((Date.now() - syncStart) / 1000);
     process.stdout.write(`\r  ⏳ Still syncing... (${elapsed}s elapsed)   `);
   }, 5000);
-  const rawSyncTimeout = Number(process.env.MIDNIGHT_WALLET_SYNC_TIMEOUT_MS);
-  const syncTimeoutMs = Number.isFinite(rawSyncTimeout) && rawSyncTimeout > 0 ? rawSyncTimeout : 45 * 60 * 1000;
-  const statePromise = waitForWalletSync(walletCtx, syncTimeoutMs);
+  const statePromise = waitForWalletSync(walletCtx);
   const state = await statePromise;
   clearInterval(syncInterval);
   process.stdout.write('\r  ✓ Synced with network.                                      \n');

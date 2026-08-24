@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
-import * as NightSafe from '../../contracts/managed/nightsafe/contract/index.js';
-import { connectNightSafeSession, isWalletLikelyLace, selectWalletId, walletLabel, type BrowserSession } from '../utils/contract.js';
+import { isWalletLikelyLace, selectWalletId, walletLabel } from '../lib/wallet-utils.js';
 import { CONTRACT_ADDRESS, TARGET_NETWORK } from '../lib/config';
 import { bytesToHex } from '../lib/encoding';
+import type { BrowserSession } from '../lib/browser-contract.js';
 
 export type WalletEntry = {
   id: string;
@@ -35,8 +35,9 @@ function discoverWallets(): WalletEntry[] {
     });
 }
 
-function readLedgerSnapshot(stateValue: unknown): TreasuryLedgerSnapshot | null {
+async function readLedgerSnapshot(stateValue: unknown): Promise<TreasuryLedgerSnapshot | null> {
   if (!stateValue) return null;
+  const NightSafe = await import('../../contracts/managed/nightsafe/contract/index.js');
   const ledgerState = NightSafe.ledger(stateValue as never);
 
   return {
@@ -75,7 +76,7 @@ export function useMidnight() {
 
   async function refreshLedgerState(activeSession: BrowserSession) {
     const currentState = await activeSession.publicDataProvider.queryContractState(CONTRACT_ADDRESS);
-    const snapshot = currentState ? readLedgerSnapshot(currentState.data) : null;
+    const snapshot = currentState ? await readLedgerSnapshot(currentState.data) : null;
     if (snapshot) setLedgerState(snapshot);
     return snapshot;
   }
@@ -93,6 +94,7 @@ export function useMidnight() {
 
     try {
       const connected = await wallet.api.connect(TARGET_NETWORK);
+      const { connectNightSafeSession } = await import('../lib/browser-contract.js');
       const browserSession = await connectNightSafeSession(connected);
       setSession(browserSession);
       setSelectedWalletId(walletId);

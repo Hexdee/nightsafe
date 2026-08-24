@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'contracts', 'managed', 'nightsafe');
 const target = path.join(root, 'public', 'contracts', 'managed', 'nightsafe');
+const browserAssetDirectories = ['keys', 'zkir'] as const;
 
 function copyRecursive(src: string, dst: string): void {
   const stat = fs.statSync(src);
@@ -20,6 +21,8 @@ function copyRecursive(src: string, dst: string): void {
 }
 
 fs.rmSync(target, { recursive: true, force: true });
-copyRecursive(source, target);
+for (const directory of browserAssetDirectories) {
+  copyRecursive(path.join(source, directory), path.join(target, directory));
+}
 
-console.log(`Synced managed contract assets to ${path.relative(root, target)}`);
+console.log(`Synced managed proof assets to ${path.relative(root, target)}`);

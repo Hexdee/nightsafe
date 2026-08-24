@@ -8,7 +8,7 @@
 ## Contract Address
 | Network | Address |
 |----------|--------------------------------------|
-| Preprod  | [ADDRESS - I will paste after deploy] |
+| Preprod  | 378f3c3f54a3fe0646b72eae1a5577cf20e1c46a4799253633698e2200095290 |
 
 ## What This Product Does
 NightSafe is a confidential treasury app for teams that manage shared funds together. It lets multiple people approve an important treasury action without exposing the full treasury intent, approval threshold, or sensitive metadata to the public chain.

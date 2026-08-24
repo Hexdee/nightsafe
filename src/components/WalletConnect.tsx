@@ -1,7 +1,9 @@
+import { Check, ExternalLink, PlugZap, ShieldCheck, Unplug, X } from 'lucide-react';
 import type { WalletEntry } from '../hooks/useMidnight';
 import { TARGET_NETWORK } from '../lib/config';
 
 type WalletConnectProps = {
+  open: boolean;
   wallets: WalletEntry[];
   selectedWalletId: string | null;
   isConnected: boolean;
@@ -9,103 +11,52 @@ type WalletConnectProps = {
   address: string | null;
   networkId: string | null;
   error: string | null;
+  onClose: () => void;
   onSelectWallet: (walletId: string) => void;
   onConnect: (walletId: string) => void;
   onDisconnect: () => void;
 };
 
-function walletTag(wallet: WalletEntry) {
-  return /lace/i.test(wallet.api.name) || /lace/i.test(wallet.api.rdns) ? 'Lace' : 'Wallet';
+function shortAddress(address: string | null) {
+  if (!address) return 'Not connected';
+  return address.length > 20 ? `${address.slice(0, 12)}…${address.slice(-7)}` : address;
 }
 
-export function WalletConnect({
-  wallets,
-  selectedWalletId,
-  isConnected,
-  connecting,
-  address,
-  networkId,
-  error,
-  onSelectWallet,
-  onConnect,
-  onDisconnect,
-}: WalletConnectProps) {
-  const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? null;
+export function WalletConnect({ open, wallets, selectedWalletId, isConnected, connecting, address, networkId, error, onClose, onSelectWallet, onConnect, onDisconnect }: WalletConnectProps) {
+  if (!open) return null;
+  const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId) ?? wallets[0] ?? null;
 
   return (
-    <section className="panel wallet-panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Wallet</p>
-          <h2>Connect Lace on {TARGET_NETWORK}</h2>
-        </div>
-        <span className={`status-pill ${isConnected ? 'status-pill--live' : 'status-pill--idle'}`}>
-          {isConnected ? 'Connected' : 'Disconnected'}
-        </span>
-      </div>
+    <div className="modal-layer wallet-modal-layer" role="presentation">
+      <button className="modal-scrim" onClick={onClose} aria-label="Close wallet dialog" />
+      <section className="wallet-modal" role="dialog" aria-modal="true" aria-labelledby="wallet-title">
+        <header className="wallet-modal__header"><span className="wallet-modal__icon"><ShieldCheck size={22} /></span><div><span>MIDNIGHT NETWORK</span><h2 id="wallet-title">{isConnected ? 'Wallet connected' : 'Connect your wallet'}</h2></div><button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></header>
 
-      {selectedWallet ? (
-        <div className="wallet-card">
-          <div className="wallet-card__meta">
-            <div className="wallet-avatar">{walletTag(selectedWallet)}</div>
-            <div>
-              <strong>{selectedWallet.api.name}</strong>
-              <p>{selectedWallet.api.rdns}</p>
-            </div>
+        {isConnected ? (
+          <div className="connected-wallet">
+            <span className="lace-logo">L</span>
+            <div><small>CONNECTED ACCOUNT</small><strong>{shortAddress(address)}</strong><span><i />{networkId ?? TARGET_NETWORK}</span></div>
+            <Check className="connected-check" size={18} />
           </div>
-          <div className="wallet-card__actions">
-            <button className="button button--ghost" type="button" onClick={() => onSelectWallet(selectedWallet.id)}>
-              {selectedWallet.api.apiVersion}
-            </button>
-            {isConnected ? (
-              <button className="button" type="button" onClick={onDisconnect}>
-                Disconnect
+        ) : wallets.length ? (
+          <div className="wallet-options">
+            {wallets.map((wallet) => (
+              <button key={wallet.id} className={wallet.id === selectedWallet?.id ? 'wallet-option wallet-option--selected' : 'wallet-option'} onClick={() => onSelectWallet(wallet.id)} type="button">
+                <span className="lace-logo">{wallet.api.name.slice(0, 1)}</span><span><strong>{wallet.api.name}</strong><small>{wallet.api.rdns}</small></span>{wallet.id === selectedWallet?.id ? <Check size={17} /> : null}
               </button>
-            ) : (
-              <button
-                className="button"
-                type="button"
-                onClick={() => onConnect(selectedWallet.id)}
-                disabled={connecting}
-              >
-                {connecting ? 'Connecting...' : 'Connect'}
-              </button>
-            )}
+            ))}
           </div>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <strong>No Midnight wallet detected.</strong>
-          <p>Install Lace, refresh the page, and connect from the wallet button.</p>
-        </div>
-      )}
+        ) : (
+          <div className="no-wallet"><span><PlugZap size={24} /></span><h3>No Midnight wallet found</h3><p>Install Lace, then refresh NightSafe to connect securely.</p><a href="https://www.lace.io/" target="_blank" rel="noreferrer">Get Lace wallet <ExternalLink size={14} /></a></div>
+        )}
 
-      <div className="wallet-list">
-        {wallets.map((wallet) => (
-          <button
-            key={wallet.id}
-            type="button"
-            className={`wallet-list__item ${wallet.id === selectedWalletId ? 'wallet-list__item--active' : ''}`}
-            onClick={() => onSelectWallet(wallet.id)}
-          >
-            <span>{wallet.api.name}</span>
-            <small>{wallet.id}</small>
-          </button>
-        ))}
-      </div>
+        {error ? <p className="error-banner">{error}</p> : null}
 
-      <div className="wallet-grid">
-        <div>
-          <span className="field-label">Address</span>
-          <code>{address ?? 'Not connected'}</code>
-        </div>
-        <div>
-          <span className="field-label">Network</span>
-          <code>{networkId ?? 'Unknown'}</code>
-        </div>
-      </div>
-
-      {error ? <p className="error-banner">{error}</p> : null}
-    </section>
+        <footer className="wallet-modal__footer">
+          <p><ShieldCheck size={14} /> NightSafe never sees your private keys.</p>
+          {isConnected ? <button className="secondary-button danger-button" onClick={onDisconnect} type="button"><Unplug size={16} />Disconnect</button> : selectedWallet ? <button className="primary-button" disabled={connecting} onClick={() => onConnect(selectedWallet.id)} type="button">{connecting ? 'Connecting…' : `Connect ${selectedWallet.api.name}`}</button> : null}
+        </footer>
+      </section>
+    </div>
   );
 }
