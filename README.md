@@ -3,7 +3,7 @@
 > A private multisig treasury app for teams that need Safe-style coordination on Midnight.
 
 ## Live Demo
-[Open the NightSafe Preprod demo](https://nightsafe-n7pqv0vpo-hexdees-projects.vercel.app)
+[Open the NightSafe Preprod demo](https://nightsafe.vercel.app)
 
 ## Contract Address
 | Network | Address |
