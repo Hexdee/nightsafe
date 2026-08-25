@@ -20,9 +20,19 @@ jobs:
           cache: npm
 
       - name: Setup Compact toolchain
+        id: compact
+        continue-on-error: true
         uses: midnightntwrk/setup-compact-action@836895c8fffbbea6bd986af2b17e8941ff29d1f8
         with:
           compact-version: '0.31.1'
+
+      - name: Fallback Compact toolchain install
+        if: steps.compact.outcome == 'failure'
+        run: |
+          curl --proto '=https' -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          compact update 0.31.1
+          compact compile --version
 
       - name: Preflight checks
         run: npm run preflight
