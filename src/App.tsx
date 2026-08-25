@@ -13,7 +13,6 @@ import {
   Fingerprint,
   LayoutDashboard,
   Menu,
-  MoonStar,
   MoreHorizontal,
   Plus,
   Search,
@@ -97,7 +96,7 @@ export default function App() {
       <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}>
         <div className="brand-row">
           <a className="brand" href="#top" aria-label="NightSafe home">
-            <span className="brand-mark"><MoonStar size={20} strokeWidth={2.2} /></span>
+            <span className="brand-mark"><img src="/brand/nightsafe-logo.png" alt="" /></span>
             <span>NightSafe</span>
           </a>
           <button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={19} /></button>
