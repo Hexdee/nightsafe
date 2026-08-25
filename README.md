@@ -48,7 +48,7 @@ NightSafe is designed for teams that want shared custody, safer operations, and 
 Run `npm test` to execute the Compact contract tests.
 
 ## CI/CD
-GitHub Actions runs `npm run compile`, `npm test`, and `npm run build` on every push to `main`.
+GitHub Actions installs the Compact toolchain, runs `compact compile --skip-zk`, `npm test`, and `npm run build` on every push to `main`. Full proving-key generation remains available locally with `npm run compile`.
 
 ## Usage Guide
 See [docs/USAGE.md](./docs/USAGE.md).
