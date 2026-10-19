@@ -53,9 +53,13 @@ midnight-level-db/
 # Temporary files
 tmp/
 temp/
+.submission-build/
 
 # Midnight network state (per-network seeds, deploy addresses)
 .midnight-state.json
 
 # Midnight wallet sync state (per-network serialized wallet state cache)
 .midnight-wallet-state/
+
+# V2 signer credentials and policy openings
+.nightsafe-private/

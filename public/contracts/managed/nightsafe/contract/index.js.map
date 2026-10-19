@@ -1,8 +1,0 @@
-{
-  "version": 3,
-  "file": "index.js",
-  "sourceRoot": "../../../../",
-  "sources": ["contracts/nightsafe.compact"],
-  "names": [],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAqBA;;;;;;;;;;;;;MAKA,AAAA,aAcC;;;;;cAbG,oBAA6B;cAC7B,oBAA6B;cAC7B,eAAsB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;yCAFtB,oBAA6B,+BAC7B,oBAA6B,+BAC7B,eAAsB;;;;;;;;;+CAFtB,oBAA6B;+CAC7B,oBAA6B;+CAC7B,eAAsB;;;OAWzB;;;;GAhBA;EAHD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAPA;;;;;;;;;yEAAsC;IACtC;;;;;;;;;yEAAsC;IACtC;;;;;;;;;yEAAgD;IAChD;;;;;;;;;yEAAgD;UAK5C,KAAa;IAAb;;;;;;;2HAAA,KAAa;;yEAAA;UACb,KAAa;IAAb;;;;;;;2HAAA,KAAa;;yEAAA;;;;;;;GAChB;EALD,AAAA,oBAAqC;;0DAArC,iBAAqC;;;;;;;;;;;;;;GAAA;EAOrC,AAAA,gBAcC;;mBAbG,oBAA6B;mBAC7B,oBAA6B;mBAC7B,eAAsB;;UAEhB,WAA+B;4BAE9B,WAAS;;4BACT,eAAa,IAAI,WAAS;;UAEjC,KAAa;;;;;6CAAa;;;;;;;;;;;kHAAa;;;IAAvC;;;;;;;2HAAA,KAAa;;yEAAA;UACb,KAAa;;;;;6CAAa;;;;;;;;;;;kHAAa;;;IAAvC;;;;;;;2HAAA,KAAa;;yEAAA;IACb;;;;;;;2HAAkC,oBAAkB;;yEAA9B;IACtB;;;;;;;2HAAkC,oBAAkB;;yEAA9B;;GACzB;;;;;;;;;;;;;;;;IA1BD;qCAAA;;;;;;;;;;;0GAAsC;KAAA;IACtC;qCAAA;;;;;;;;;;;0GAAsC;KAAA;IACtC;qCAAA;;;;;;;;;;;0GAAgD;KAAA;IAChD;qCAAA;;;;;;;;;;;0GAAgD;KAAA;;;;;;;;;;;;"
-}

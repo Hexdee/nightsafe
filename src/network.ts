@@ -59,9 +59,9 @@ export const NETWORK_CONFIGS: Record<NetworkId, NetworkConfig> = {
   },
   preprod: {
     networkId: 'preprod',
-    indexer:   'https://indexer.preprod.midnight.network/api/v4/graphql',
-    indexerWS: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
-    node:      'https://rpc.preprod.midnight.network',
+    indexer:   'https://midnight-preprod.blockfrost.io/api/v0',
+    indexerWS: 'wss://midnight-preprod.blockfrost.io/api/v0/ws',
+    node:      'https://rpc.midnight-preprod.blockfrost.io',
     proofServer: 'http://127.0.0.1:6300',
     faucet: 'https://midnight-tmnight-preprod.nethermind.dev',
     composeServices: ['proof-server'],
@@ -170,8 +170,9 @@ function applyEnvOverrides(base: NetworkConfig, env: NodeJS.ProcessEnv): Network
 
 export function resolveNetwork(opts: ResolveOptions = {}): ResolveResult {
   const argv = opts.argv ?? process.argv;
-  const env = opts.env ?? process.env;
   const cwd = opts.cwd ?? process.cwd();
+  if (!opts.env && fs.existsSync(path.join(cwd, '.env.local'))) process.loadEnvFile(path.join(cwd, '.env.local'));
+  const env = opts.env ?? process.env;
 
   const flag = parseNetworkFlag(argv);
   let network: NetworkId;
@@ -192,6 +193,19 @@ export function resolveNetwork(opts: ResolveOptions = {}): ResolveResult {
   }
 
   const config = applyEnvOverrides(NETWORK_CONFIGS[network], env);
+  if (network === 'preprod') {
+    const urls = [config.indexer, config.indexerWS, config.node];
+    if (urls.some((value) => new URL(value).hostname.endsWith('blockfrost.io'))) {
+      const projectId = env.BLOCKFROST_PROJECT_ID?.trim();
+      if (!projectId?.startsWith('nightpreprod')) {
+        throw new Error('Preprod now requires a Blockfrost Midnight Preprod project token. Set BLOCKFROST_PROJECT_ID in the ignored .env.local file, or supply self-hosted MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL and MIDNIGHT_NODE_URL.');
+      }
+      for (const field of ['indexer', 'indexerWS', 'node'] as const) {
+        const url = new URL(config[field]);
+        if (url.hostname.endsWith('blockfrost.io')) { url.searchParams.set('project_id', projectId);config[field] = url.toString(); }
+      }
+    }
+  }
   return { network, config, source };
 }
 

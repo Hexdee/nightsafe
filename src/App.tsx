@@ -1,228 +1,82 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Activity,
-  ArrowRight,
-  Bell,
-  Check,
-  ChevronDown,
-  CircleHelp,
-  Clock3,
-  Copy,
-  ExternalLink,
-  FileCheck2,
-  Fingerprint,
-  LayoutDashboard,
-  Menu,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Settings,
-  ShieldCheck,
-  Sun,
-  Users,
-  WalletCards,
-  X,
-} from 'lucide-react';
+import { useState } from 'react';
+import { Fingerprint, Plus, ShieldCheck, WalletCards, RefreshCw } from 'lucide-react';
 import { CoreFeature } from './components/CoreFeature';
+import { LocalDemo } from './components/LocalDemo';
 import { WalletConnect } from './components/WalletConnect';
 import { useMidnight } from './hooks/useMidnight';
-import { CONTRACT_ADDRESS, CONTRACT_INITIAL_PRIVATE_LIMIT, TARGET_NETWORK } from './lib/config';
-
-const navItems = [
-  { label: 'Overview', icon: LayoutDashboard },
-  { label: 'Transactions', icon: Activity },
-  { label: 'Assets', icon: WalletCards },
-  { label: 'Members', icon: Users },
-] as const;
-
-function shortAddress(address: string | null | undefined) {
-  if (!address) return 'Not configured';
-  if (address.length < 16) return address;
-  return `${address.slice(0, 9)}…${address.slice(-5)}`;
-}
+import { CONTRACT_ADDRESS, TARGET_NETWORK } from './lib/config';
+import { bytesToHex } from './lib/encoding';
+import { parseAmount, parseBytes32 } from './lib/treasury';
+import { createNightSafePrivateState } from './witnesses';
 
 export default function App() {
-  const {
-    wallets,
-    selectedWallet,
-    session,
-    connecting,
-    calling,
-    error,
-    lastCall,
-    ledgerState,
-    connectWallet,
-    disconnectWallet,
-    selectWallet,
-    authorizeTreasuryMove,
-  } = useMidnight();
-  const [activeNav, setActiveNav] = useState('Overview');
-  const [mobileNav, setMobileNav] = useState(false);
-  const [transactionOpen, setTransactionOpen] = useState(false);
-  const [walletOpen, setWalletOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    const savedTheme = window.localStorage.getItem('nightsafe-theme');
-    return savedTheme === 'light' ? 'light' : 'dark';
-  });
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0c0f0e' : '#f5f7f3');
-    window.localStorage.setItem('nightsafe-theme', theme);
-  }, [theme]);
-
-  const proposalCount = Number.parseInt(ledgerState.proposalCount, 10) || 0;
-  const executedCount = Number.parseInt(ledgerState.executedCount, 10) || 0;
-  const executionRate = proposalCount > 0 ? Math.min(100, (executedCount / proposalCount) * 100) : 0;
-  const address = session?.address ?? null;
-  const network = session?.networkId ?? TARGET_NETWORK;
-  const shortContract = useMemo(() => shortAddress(CONTRACT_ADDRESS), []);
-
-  async function copyAddress() {
-    if (!CONTRACT_ADDRESS) return;
-    await navigator.clipboard?.writeText(CONTRACT_ADDRESS);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
+  const m = useMidnight();
+  const [walletOpen, setWalletOpen] = useState(false);const [proposalOpen, setProposalOpen] = useState(false);
+  const [secret, setSecret] = useState('');const [publicKey, setPublicKey] = useState('');
+  const [threshold, setThreshold] = useState('2');const [nonce, setNonce] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');const [depositColor, setDepositColor] = useState('0'.repeat(64));
+  const [notice, setNotice] = useState('');const [localError, setLocalError] = useState('');
+  function privateState() { return createNightSafePrivateState(BigInt(threshold), secret ? parseBytes32(secret, 'Signer key') : null, nonce ? parseBytes32(nonce, 'Policy opening') : null); }
+  async function run(action: () => Promise<unknown>) { setLocalError('');setNotice('');try { await action(); } catch (e) { setLocalError(e instanceof Error ? e.message : 'Action failed.'); } }
+  async function setSigner(value: string) {
+    const bytes = parseBytes32(value, 'Signer key');
+    const { pureCircuits } = await import('./generated/nightsafe/index.js');
+    setSecret(value);setPublicKey(bytesToHex(pureCircuits.signerPublicKey(bytes)));
   }
-
-  function requestWallet() {
-    setWalletOpen(true);
+  async function newSigner() {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const value = bytesToHex(bytes);await setSigner(value);
+    const { pureCircuits } = await import('./generated/nightsafe/index.js');
+    const key = bytesToHex(pureCircuits.signerPublicKey(bytes));
+    const blob = new Blob([JSON.stringify({ version: 2, secret: value, publicKey: key }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);const anchor = document.createElement('a');anchor.href = url;anchor.download = 'nightsafe-signer-private.json';anchor.click();URL.revokeObjectURL(url);
+    setNotice('Signer key downloaded. Keep this file private and backed up. Share only the public key. Each signer must generate their own key.');
   }
-
-  return (
-    <div className="app-shell">
-      <aside className={`sidebar ${mobileNav ? 'sidebar--open' : ''}`}>
-        <div className="brand-row">
-          <a className="brand" href="#top" aria-label="NightSafe home">
-            <span className="brand-mark"><img src="/brand/nightsafe-logo.png" alt="" /></span>
-            <span>NightSafe</span>
-          </a>
-          <button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={19} /></button>
+  return <div className="app-shell">
+    <aside className="sidebar"><a className="brand" href="#top"><span className="brand-mark"><img src="/brand/nightsafe-logo.png" alt="" /></span><span>NightSafe</span></a>
+      <div className="safe-switcher safe-switcher--static"><span className="safe-avatar">NS</span><span className="safe-switcher__copy"><small>MIDNIGHT</small><strong>Shared treasury</strong></span><ShieldCheck size={18} /></div>
+      <p className="privacy-note">Three registered signers. A fixed, committed threshold. Independent approvals for each payment.</p>
+      <div className="sidebar-spacer" /><button className="wallet-pill" onClick={() => setWalletOpen(true)} disabled={m.calling}><WalletCards size={18} /><span>{m.session ? 'Wallet connected' : 'Connect wallet'}</span></button>
+    </aside>
+    <main className="main" id="top"><header className="topbar"><strong>NightSafe Treasury</strong><span className="network-chip">{TARGET_NETWORK}</span></header>
+      <div className="content"><section className="page-heading"><div><div className="eyebrow"><Fingerprint size={16} /> AUTHENTICATED APPROVALS</div><h1>Treasury overview</h1><p>Propose a payment, collect independent approvals, then execute once.</p></div>
+        <button className="primary-button" disabled={!m.session || m.calling} onClick={() => setProposalOpen(true)}><Plus size={18} />Propose payment</button></section>
+      {!CONTRACT_ADDRESS && <p className="error-banner">This V2 treasury needs a new deployment. The previous prototype address cannot accept these calls. See the setup guide in the repository.</p>}
+      <LocalDemo />
+      <section className="overview-grid"><article className="balance-card"><div className="card-label">Proposals</div><h2>{m.ledgerState.proposalCount}</h2><p>Recorded on the connected contract</p></article>
+        <article className="balance-card"><div className="card-label">Executed payments</div><h2>{m.ledgerState.executedCount}</h2><p>Quorum-approved transfers from contract custody</p></article></section>
+      <section className="transactions-card"><div className="section-heading"><div><h2>Your signer identity</h2><p>Separate from your wallet seed. Secrets stay in this browser session and are cleared on reload.</p></div><button className="secondary-button" disabled={m.calling} onClick={() => void run(newSigner)}>Generate & download key</button></div>
+        <div className="form-section ns-form"><label className="form-field"><span>Load your private signer key file</span><input type="file" accept="application/json" disabled={m.calling} onChange={(e) => { const file = e.target.files?.[0];if(file) void run(async () => { const data = JSON.parse(await file.text());await setSigner(data.secret); });e.target.value = ''; }} /></label>
+          <label className="form-field"><span>Or enter your NightSafe signer key</span><input type="password" autoComplete="off" value={secret} disabled={m.calling} onChange={(e) => { setSecret(e.target.value);setPublicKey(''); }} onBlur={() => { if(secret) void run(() => setSigner(secret)); }} /></label>
+          {publicKey && <label className="form-field"><span>Your public signer key (safe to share)</span><input readOnly value={publicKey} /></label>}
+          <button className="secondary-button" disabled={m.calling} onClick={() => { setSecret('');setPublicKey('');setNonce(''); }}>Clear private inputs</button>
         </div>
-
-        <div className="safe-switcher safe-switcher--static">
-          <span className="safe-avatar">NS</span>
-          <span className="safe-switcher__copy"><small>CONTRACT STATUS</small><strong>{CONTRACT_ADDRESS ? 'NightSafe Treasury' : 'Deployment required'}</strong></span>
-          <ShieldCheck size={16} />
-        </div>
-
-        <nav className="primary-nav" aria-label="Main navigation">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button key={item.label} className={activeNav === item.label ? 'nav-item nav-item--active' : 'nav-item'} type="button" onClick={() => { setActiveNav(item.label); setMobileNav(false); }}>
-                <Icon size={18} /><span>{item.label}</span>
-                {item.label === 'Transactions' && proposalCount > 0 ? <em>{proposalCount}</em> : null}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="nav-divider" />
-        <nav className="secondary-nav" aria-label="Secondary navigation">
-          <button className="nav-item" type="button"><Settings size={18} /><span>Settings</span></button>
-          <button className="nav-item" type="button"><CircleHelp size={18} /><span>Help & docs</span><ExternalLink size={14} className="nav-trail" /></button>
-        </nav>
-
-        <div className="sidebar-spacer" />
-        <div className="privacy-note"><span><Fingerprint size={18} /></span><div><strong>Private by default</strong><p>Approval details stay off-chain and are verified with zero-knowledge proofs.</p></div></div>
-        <button className="wallet-pill" type="button" onClick={requestWallet}>
-          <span className={session ? 'connection-dot connection-dot--live' : 'connection-dot'} />
-          <span><strong>{session ? shortAddress(address) : 'Connect wallet'}</strong><small>{session ? network : 'Midnight Lace'}</small></span>
-          <MoreHorizontal size={17} />
-        </button>
-      </aside>
-
-      {mobileNav ? <button className="sidebar-scrim" onClick={() => setMobileNav(false)} aria-label="Close menu" /> : null}
-
-      <main className="main" id="top">
-        <header className="topbar">
-          <div className="topbar__left"><button className="icon-button mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button><div className="breadcrumb"><span>Contracts</span><b>/</b><strong>NightSafe Treasury</strong></div></div>
-          <div className="topbar__right">
-            <label className="search-box"><Search size={16} /><input aria-label="Search" placeholder="Search transactions" /><kbd>⌘ K</kbd></label>
-            <button className="icon-button theme-toggle" type="button" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>{theme === 'dark' ? <Sun size={18} /> : <MoonStar size={18} />}</button>
-            <button className="icon-button notification-button" aria-label="Notifications"><Bell size={18} /></button>
-            <div className="network-chip"><span />{TARGET_NETWORK}<ChevronDown size={14} /></div>
-          </div>
-        </header>
-
-        <div className="content">
-          <section className="page-heading">
-            <div>
-              <div className="eyebrow"><span className={session ? 'live-dot' : 'live-dot live-dot--idle'} /> {session ? 'Wallet connected' : 'Wallet disconnected'}</div>
-              <h1>Treasury overview</h1>
-              <p>{session ? 'Live state from your NightSafe contract and this wallet session.' : 'Connect Lace to load your NightSafe contract state.'}</p>
-            </div>
-            <button className="primary-button" type="button" onClick={() => setTransactionOpen(true)}><Plus size={18} />New transaction</button>
-          </section>
-
-          <section className="overview-grid" aria-label="Treasury overview">
-            <article className="balance-card">
-              <div className="card-label"><span>Treasury assets</span><WalletCards size={17} /></div>
-              <div className="card-empty card-empty--compact">
-                <span className="empty-icon"><WalletCards size={21} /></span>
-                <div>
-                  <strong>{session ? 'No asset balance source connected' : 'Connect a wallet to view assets'}</strong>
-                  <p>{session ? 'The current contract exposes authorization state, but no token balance feed.' : 'NightSafe will show wallet-backed treasury assets here once connected.'}</p>
-                </div>
-                {!session ? <button className="text-button" type="button" onClick={requestWallet}>Connect Lace <ArrowRight size={15} /></button> : null}
-              </div>
-            </article>
-
-            <article className="quorum-card">
-              <div className="card-title-row"><div><span className="card-kicker">PRIVATE SIGNING POLICY</span><h2>{CONTRACT_INITIAL_PRIVATE_LIMIT.toString()} approvals minimum</h2></div><span className="shield-badge"><ShieldCheck size={21} /></span></div>
-              <div className="private-policy"><Fingerprint size={18} /><span>Threshold stored in private state</span></div>
-              <p>Signer membership and individual approvals are intentionally not exposed by the current contract.</p>
-              <button className="text-button" onClick={() => setActiveNav('Members')} type="button">View privacy model <ArrowRight size={15} /></button>
-            </article>
-
-            <article className="activity-card">
-              <div className="card-label"><span>On-chain activity</span><Activity size={17} /></div>
-              {session ? (
-                <>
-                  <div className="activity-stats"><div><strong>{proposalCount}</strong><span>Proposals</span></div><div><strong>{executedCount}</strong><span>Executed</span></div></div>
-                  <div className="success-rate"><div><span>Execution rate</span><strong>{proposalCount > 0 ? `${executionRate.toFixed(1)}%` : 'No activity'}</strong></div><div className="progress"><span style={{ width: `${executionRate}%` }} /></div></div>
-                </>
-              ) : (
-                <div className="activity-empty"><strong>Contract state not loaded</strong><p>Connect Lace to query the live proposal and execution counters.</p><button className="text-button" type="button" onClick={requestWallet}>Connect wallet <ArrowRight size={14} /></button></div>
-              )}
-              <div className="contract-line"><span>Contract</span>{CONTRACT_ADDRESS ? <button type="button" onClick={() => void copyAddress()}>{copied ? 'Copied' : shortContract}<Copy size={13} /></button> : <strong>Not configured</strong>}</div>
-            </article>
-          </section>
-
-          <section className="transactions-section">
-            <div className="section-heading"><div><h2>Recent transactions</h2><p>Verified activity available in this browser session.</p></div>{lastCall ? <button className="secondary-button" type="button" onClick={() => setActiveNav('Transactions')}>View activity <ArrowRight size={15} /></button> : null}</div>
-
-            {lastCall ? (
-              <div className="transaction-table" role="table" aria-label="Recent transactions">
-                <div className="table-head" role="row"><span>Transaction</span><span>Amount</span><span>Approvals</span><span>Status</span><span>Created</span><span /></div>
-                <div className="transaction-row" role="row">
-                  <div className="transaction-name"><span className="tx-icon tx-icon--success"><FileCheck2 size={17} /></span><span><strong>Treasury authorization</strong><small>Commitment {shortAddress(lastCall.lastProposalCommitment)}</small></span></div>
-                  <div className="transaction-amount"><strong>Private</strong><small>Not disclosed</small></div>
-                  <div className="approvals"><span className="private-value"><Fingerprint size={14} /> Private</span></div>
-                  <div><span className="status status--executed"><i />Executed</span></div>
-                  <div className="transaction-time"><Clock3 size={14} />This session</div>
-                  <button className="plain-icon row-menu" type="button" onClick={() => void navigator.clipboard?.writeText(lastCall.txHash)} aria-label="Copy transaction hash" title={lastCall.txHash}><Copy size={16} /></button>
-                </div>
-              </div>
-            ) : (
-              <div className="table-empty">
-                <span className="empty-icon"><Activity size={22} /></span>
-                <h3>No transaction activity yet</h3>
-                <p>{session ? 'Transactions authorized during this session will appear here. Historical indexing is not connected yet.' : 'Connect Lace to read contract state and authorize a private treasury transaction.'}</p>
-                <button className="secondary-button" type="button" onClick={session ? () => setTransactionOpen(true) : requestWallet}>{session ? <Plus size={15} /> : <WalletCards size={15} />}{session ? 'Create transaction' : 'Connect wallet'}</button>
-              </div>
-            )}
-          </section>
-
-          <section className="security-banner"><div className="security-icon"><ShieldCheck size={22} /></div><div><strong>Privacy guarantees are enforced by the contract.</strong><p>Public counters and commitments come from the ledger. Threshold and approval details remain in private state.</p></div><span className="verified-chip"><Check size={14} /> Compact circuit</span></section>
-        </div>
-      </main>
-
-      <CoreFeature open={transactionOpen} connected={Boolean(session)} calling={calling} ledgerState={ledgerState} lastCall={lastCall} error={error} onClose={() => setTransactionOpen(false)} onConnectRequest={() => { setTransactionOpen(false); setWalletOpen(true); }} onAuthorize={authorizeTreasuryMove} />
-      <WalletConnect open={walletOpen} wallets={wallets} selectedWalletId={selectedWallet?.id ?? null} isConnected={Boolean(session)} connecting={connecting} address={address} networkId={network} error={error} onClose={() => setWalletOpen(false)} onSelectWallet={selectWallet} onConnect={connectWallet} onDisconnect={disconnectWallet} />
-    </div>
-  );
+        {m.ledgerState.signerKeys.length > 0 && <div className="ns-form"><h3>Registered signers</h3>{m.ledgerState.signerKeys.map((key) => <p className="ns-code" key={key}>{key}{key === publicKey ? ' (you)' : ''}</p>)}</div>}
+      </section>
+      <section className="transactions-card"><div className="section-heading"><div><h2>Execution policy</h2><p>Enter the policy opening shared by the treasury creator. The contract checks it against the immutable commitment.</p></div></div><div className="form-section ns-form">
+        <label className="form-field"><span>Required approvals</span><select value={threshold} disabled={m.calling} onChange={(e) => setThreshold(e.target.value)}><option value="2">2 of 3</option><option value="3">3 of 3</option></select></label>
+        <label className="form-field"><span>Private policy opening (64 hex characters)</span><input type="password" autoComplete="off" value={nonce} disabled={m.calling} onChange={(e) => setNonce(e.target.value)} /></label>
+        {m.ledgerState.policyCommitment && <p className="ns-code">Public policy commitment: {m.ledgerState.policyCommitment}</p>}
+      </div></section>
+      <section className="transactions-card"><div className="section-heading"><div><h2>Fund the treasury</h2><p>Deposit test unshielded tokens into contract custody. Amounts use base units. DUST is for fees.</p></div></div><div className="form-section ns-form">
+        <label className="form-field"><span>Token color (all zeroes for native test NIGHT)</span><input value={depositColor} disabled={m.calling} onChange={(e) => setDepositColor(e.target.value)} /></label>
+        <label className="form-field"><span>Amount in base units</span><input inputMode="numeric" value={depositAmount} disabled={m.calling} onChange={(e) => setDepositAmount(e.target.value)} /></label>
+        <button className="primary-button" disabled={!m.session || m.calling} onClick={() => void run(() => m.deposit(parseBytes32(depositColor, 'Token color'), parseAmount(depositAmount), privateState()))}>Deposit test tokens</button>
+      </div></section>
+      <section className="transactions-card"><div className="section-heading"><div><h2>Payment proposals</h2><p>Recipient, amount and signer participation are public. Notes use a hash with fresh salt.</p></div><button className="secondary-button" disabled={!m.session || m.calling} onClick={() => void run(m.refresh)}><RefreshCw size={16} />Refresh</button></div>
+        {m.ledgerState.proposals.length === 0 ? <div className="table-empty"><h3>No proposals loaded</h3><p>Connect a wallet to the deployed V2 treasury, then create a payment proposal.</p></div> : m.ledgerState.proposals.map((p) => <article className="ns-proposal" key={p.id}>
+          <h3>Proposal #{p.id} · {p.executed ? 'Executed' : `${p.approvals} independent approvals`}</h3><p>{p.amount} token base units</p><p className="ns-code">To: {p.recipient}</p><p className="ns-code">Token: {p.color}</p><p className="ns-code">Memo commitment: {p.memoCommitment}</p>
+          <div className="ns-actions"><button className="secondary-button" disabled={p.executed || m.calling || !secret} onClick={() => void run(() => m.approve(BigInt(p.id), privateState()))}>Approve with my signer key</button><button className="primary-button" disabled={p.executed || m.calling || !nonce} onClick={() => void run(() => m.execute(BigInt(p.id), privateState()))}>Execute approved payment</button></div>
+        </article>)}
+      </section>
+      {m.calling && <p role="status" className="success-banner">Generating proof and waiting for network confirmation…</p>}
+      {(localError || m.error) && <p role="alert" className="error-banner">{localError || m.error}</p>}
+      {notice && <p role="status" className="success-banner">{notice}</p>}
+      {m.lastCall && <p className="success-banner ns-code">Confirmed {m.lastCall.action}: {m.lastCall.txHash}</p>}
+      <section className="security-banner"><ShieldCheck /><div><strong>Test-network treasury</strong><p>Signer secrets and the policy opening are private witnesses. Payment details and approval participation are public. This implementation has not received an independent security audit.</p></div></section>
+      <p className="ns-code">Contract: {CONTRACT_ADDRESS || 'Deployment required'}</p>
+    </div></main>
+    <CoreFeature open={proposalOpen} calling={m.calling} onClose={() => setProposalOpen(false)} onPropose={(transfer) => m.propose(transfer, privateState())} />
+    <WalletConnect open={walletOpen} wallets={m.wallets} selectedWalletId={m.selectedWallet?.id ?? null} isConnected={Boolean(m.session)} connecting={m.connecting} address={m.session?.address ?? null} networkId={TARGET_NETWORK} error={m.error} onClose={() => setWalletOpen(false)} onSelectWallet={m.selectWallet} onConnect={m.connectWallet} onDisconnect={m.disconnectWallet} />
+  </div>;
 }

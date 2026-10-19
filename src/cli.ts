@@ -3,6 +3,9 @@
  */
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
+import { loadTreasuryPolicy } from './policy';
+import { createProviders } from './providers';
+import { parseBytes32, parseAmount, parseProposalId, commitMemo } from './lib/treasury';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -25,7 +28,7 @@ globalThis.WebSocket = WebSocket;
 
 // Must match the privateStateId used at deploy time so the CLI reconnects to
 // the same private state.
-const PRIVATE_STATE_ID = 'nightsafePrivateState';
+const PRIVATE_STATE_ID = 'nightsafeV2PrivateState';
 
 const { network, config: networkConfig } = resolveNetwork();
 const SEED = getOrCreateSeed(network);
@@ -51,47 +54,6 @@ const compiledContract = (CompiledContract.make('nightsafe', Counter.Contract as
 
 // ─── Providers ─────────────────────────────────────────────────────────────────
 
-async function createProviders(walletCtx: WalletContext) {
-  // The SDK requires the private-state password to be at least 16 characters.
-  // The default below is a placeholder for local devnet only — set a strong
-  // password via PRIVATE_STATE_PASSWORD when you move to a non-local target.
-  const privateStatePassword = process.env.PRIVATE_STATE_PASSWORD?.trim() || 'Local-Devnet-Development-Placeholder-1';
-
-  const walletProvider = {
-    // In Midnight.js 4.1.x the WalletProvider interface returns the key objects
-    // (CoinPublicKey / EncPublicKey) directly — no longer hex strings.
-    getCoinPublicKey: () => walletCtx.shieldedSecretKeys.coinPublicKey,
-    getEncryptionPublicKey: () => walletCtx.shieldedSecretKeys.encryptionPublicKey,
-    async balanceTx(tx: any, ttl?: Date) {
-      // balanceUnboundTransaction -> finalizeRecipe is the complete balancing
-      // path in wallet-sdk 1.x; the earlier explicit signRecipe step is gone.
-      const recipe = await walletCtx.wallet.balanceUnboundTransaction(
-        tx,
-        { shieldedSecretKeys: walletCtx.shieldedSecretKeys, dustSecretKey: walletCtx.dustSecretKey },
-        { ttl: ttl ?? new Date(Date.now() + 30 * 60 * 1000) },
-      );
-      return walletCtx.wallet.finalizeRecipe(recipe);
-    },
-    submitTx: (tx: any) => walletCtx.wallet.submitTransaction(tx) as any,
-  };
-
-  const zkConfigProvider = new NodeZkConfigProvider(zkConfigPath);
-  const accountId = walletCtx.unshieldedKeystore.getBech32Address().toString();
-
-  return {
-    privateStateProvider: levelPrivateStateProvider({
-      privateStateStoreName: 'nightsafe-state',
-      accountId,
-      privateStoragePasswordProvider: () => privateStatePassword,
-    }),
-    publicDataProvider: indexerPublicDataProvider(networkConfig.indexer, networkConfig.indexerWS),
-    zkConfigProvider,
-    proofProvider: httpClientProofProvider(networkConfig.proofServer, zkConfigProvider),
-    walletProvider,
-    midnightProvider: walletProvider,
-  };
-}
-
 // ─── Main CLI ──────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -100,6 +62,10 @@ async function main() {
   console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
   const rl = createInterface({ input: stdin, output: stdout });
+  const treasuryPolicy = loadTreasuryPolicy();
+  const signerFile = process.env.NIGHTSAFE_SIGNER_FILE;
+  const signer = signerFile ? JSON.parse(fs.readFileSync(signerFile, 'utf8')) : null;
+  const privateState = { ...treasuryPolicy.privateState, secret: signer ? parseBytes32(signer.secret, 'Signer secret') : null };
 
   // Check for deployment
   const deployment = getDeployment(network);
@@ -150,40 +116,53 @@ async function main() {
 
     // Setup providers and connect to contract
     console.log('  Connecting to contract...');
-    const providers = await createProviders(walletCtx);
+    const providers = await createProviders(walletCtx, networkConfig);
 
     const deployed: any = await findDeployedContract(providers, {
       compiledContract: compiledContract as any,
       contractAddress: deployment.address,
       privateStateId: PRIVATE_STATE_ID,
-      initialPrivateState: createCounterPrivateState(2n),
+      initialPrivateState: privateState,
     });
 
+    await providers.privateStateProvider.set(PRIVATE_STATE_ID, privateState);
     console.log('  ✅ Connected!\n');
 
     // Interactive CLI loop
     let running = true;
     while (running) {
       console.log('─── Menu ───────────────────────────────────────────────────────');
-      console.log('  1. Authorize treasury move');
+      console.log('  1. Propose payment');
       console.log('  2. Read current treasury state');
       console.log('  3. Check wallet balance');
-      console.log('  4. Exit\n');
+      console.log('  4. Exit');
+      console.log('  5. Approve proposal');
+      console.log('  6. Execute approved proposal');
+      console.log('  7. Deposit test NIGHT');
 
       const choice = await rl.question('  Your choice: ');
 
       switch (choice.trim()) {
         case '1': {
-          const delta = await rl.question('  Enter delta: ');
-          console.log('\n  Submitting transaction (this may take 30-60 seconds)...');
-          try {
-            const tx = await deployed.callTx.increment(BigInt(delta));
-            console.log(`\n  ✅ Treasury move authorized`);
-            console.log(`  Transaction ID: ${tx.public.txId}`);
-            console.log(`  Block height: ${tx.public.blockHeight}\n`);
-          } catch (error) {
-            console.error('\n  ❌ Failed:', error instanceof Error ? error.message : error);
-          }
+          const recipient = parseBytes32(await rl.question('  Recipient public address (hex): '));
+          const amount = parseAmount(await rl.question('  Amount in token base units: '));
+          const color = parseBytes32(await rl.question('  Token color (64 zeroes for NIGHT): '));
+          const memo = await commitMemo(await rl.question('  Private note (optional): '));
+          const tx = await deployed.callTx.propose({ recipient: { bytes: recipient }, color, amount, memoCommitment: memo.commitment });
+          console.log(`Proposal confirmed: ${tx.public.txHash}`);
+          break;
+        }
+        case '5':
+        case '6': {
+          const id = parseProposalId(await rl.question('  Proposal ID: '));
+          const tx = choice.trim() === '5' ? await deployed.callTx.approve(id) : await deployed.callTx.execute(id);
+          console.log(`Confirmed: ${tx.public.txHash}`);
+          break;
+        }
+        case '7': {
+          const amount = parseAmount(await rl.question('  Deposit in test NIGHT base units: '));
+          const tx = await deployed.callTx.deposit(new Uint8Array(32), amount);
+          console.log(`Deposit confirmed: ${tx.public.txHash}`);
           break;
         }
 
@@ -221,7 +200,7 @@ async function main() {
           break;
 
         default:
-          console.log('\n  ❌ Invalid choice. Please enter 1-4.\n');
+          console.log('\n  ❌ Invalid choice. Please enter 1-7.\n');
       }
     }
 

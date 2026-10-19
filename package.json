@@ -4,7 +4,7 @@
   "type": "module",
   "description": "NightSafe is a private multisig treasury app for teams on Midnight",
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "compile": "compact compile contracts/nightsafe.compact contracts/managed/nightsafe",
     "typecheck": "npx tsc --noEmit",
@@ -25,8 +25,11 @@
     "proof-server:start": "docker compose up -d",
     "proof-server:stop": "docker compose down",
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state",
-    "test": "node --import tsx --test tests/nightsafe.test.ts",
-    "test:e2e": "tsx scripts/e2e-check.ts"
+    "test": "node --import tsx --test tests/nightsafe.test.ts tests/treasury.test.ts tests/network.test.ts",
+    "test:e2e": "tsx scripts/e2e-check.ts",
+    "signer:new": "tsx scripts/signer-new.ts",
+    "policy:new": "tsx scripts/policy-new.ts",
+    "demo:preprod": "tsx scripts/demo-preprod.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

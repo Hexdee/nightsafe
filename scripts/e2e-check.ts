@@ -23,7 +23,7 @@ import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-j
 globalThis.WebSocket = WebSocket;
 
 // Must match the privateStateId used at deploy time.
-const PRIVATE_STATE_ID = 'nightsafePrivateState';
+const PRIVATE_STATE_ID = 'nightsafeV2PrivateState';
 
 // ─── Network configuration ─────────────────────────────────────────────────────
 

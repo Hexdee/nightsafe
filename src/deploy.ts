@@ -14,6 +14,8 @@ import { createCounterPrivateState, witnesses, type CounterPrivateState } from '
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocket } from 'ws';
 import * as Rx from 'rxjs';
+import { loadTreasuryPolicy } from './policy';
+import { createProviders } from './providers';
 
 // Midnight SDK imports
 import { deployContract } from '@midnight-ntwrk/midnight-js-contracts';
@@ -27,8 +29,9 @@ import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-j
 globalThis.WebSocket = WebSocket;
 
 // Identifier under which this contract's private state is stored.
-const PRIVATE_STATE_ID = 'nightsafePrivateState';
-const INITIAL_PRIVATE_STATE = createCounterPrivateState(2n);
+const PRIVATE_STATE_ID = 'nightsafeV2PrivateState';
+const treasuryPolicy = loadTreasuryPolicy();
+const INITIAL_PRIVATE_STATE = treasuryPolicy.privateState;
 
 // ─── Network configuration ─────────────────────────────────────────────────────
 //
@@ -135,47 +138,6 @@ const compiledContract = (CompiledContract.make('nightsafe', Counter.Contract as
 ) as any;
 
 // ─── Providers ─────────────────────────────────────────────────────────────────
-
-async function createProviders(walletCtx: WalletContext) {
-  // The SDK requires the private-state password to be at least 16 characters.
-  // The default below is a placeholder for local devnet only — set a strong
-  // password via PRIVATE_STATE_PASSWORD when you move to a non-local target.
-  const privateStatePassword = process.env.PRIVATE_STATE_PASSWORD?.trim() || 'Local-Devnet-Development-Placeholder-1';
-
-  const walletProvider = {
-    // In Midnight.js 4.1.x the WalletProvider interface returns the key objects
-    // (CoinPublicKey / EncPublicKey) directly — no longer hex strings.
-    getCoinPublicKey: () => walletCtx.shieldedSecretKeys.coinPublicKey,
-    getEncryptionPublicKey: () => walletCtx.shieldedSecretKeys.encryptionPublicKey,
-    async balanceTx(tx: any, ttl?: Date) {
-      // balanceUnboundTransaction -> finalizeRecipe is the complete balancing
-      // path in wallet-sdk 1.x; the earlier explicit signRecipe step is gone.
-      const recipe = await walletCtx.wallet.balanceUnboundTransaction(
-        tx,
-        { shieldedSecretKeys: walletCtx.shieldedSecretKeys, dustSecretKey: walletCtx.dustSecretKey },
-        { ttl: ttl ?? new Date(Date.now() + 30 * 60 * 1000) },
-      );
-      return walletCtx.wallet.finalizeRecipe(recipe);
-    },
-    submitTx: (tx: any) => walletCtx.wallet.submitTransaction(tx) as any,
-  };
-
-  const zkConfigProvider = new NodeZkConfigProvider(zkConfigPath);
-  const accountId = walletCtx.unshieldedKeystore.getBech32Address().toString();
-
-  return {
-    privateStateProvider: levelPrivateStateProvider({
-      privateStateStoreName: 'nightsafe-state',
-      accountId,
-      privateStoragePasswordProvider: () => privateStatePassword,
-    }),
-    publicDataProvider: indexerPublicDataProvider(networkConfig.indexer, networkConfig.indexerWS),
-    zkConfigProvider,
-    proofProvider: httpClientProofProvider(networkConfig.proofServer, zkConfigProvider),
-    walletProvider,
-    midnightProvider: walletProvider,
-  };
-}
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
@@ -318,7 +280,7 @@ async function main() {
   process.stdout.write('\r  Proof server ready!                                 \n');
 
   console.log('  Setting up providers...');
-  const providers = await createProviders(walletCtx);
+  const providers = await createProviders(walletCtx, networkConfig);
 
   // The wallet's reported DUST balance is a *time-projection* of what its
   // registered NIGHT will eventually generate; the tx-builder spends only
@@ -346,7 +308,7 @@ async function main() {
       // initialPrivateState. args is the contract constructor's arguments.
       deployed = await deployContract(providers, {
         compiledContract: compiledContract as any,
-        args: [],
+        args: [treasuryPolicy.keys],
         privateStateId: PRIVATE_STATE_ID,
         initialPrivateState: INITIAL_PRIVATE_STATE,
       });

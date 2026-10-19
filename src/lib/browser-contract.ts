@@ -6,10 +6,9 @@ import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import * as ledger from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { ConnectedAPI } from '@midnight-ntwrk/dapp-connector-api';
-import { createNightSafePrivateState, witnesses } from '../witnesses.js';
+import { createNightSafePrivateState, witnesses, type NightSafePrivateState } from '../witnesses.js';
 import {
   CONTRACT_ADDRESS,
-  CONTRACT_INITIAL_PRIVATE_LIMIT,
   CONTRACT_PRIVATE_STATE_ID,
   CONTRACT_ZK_BASE_URL,
   LOCAL_PROOF_SERVER_URL,
@@ -23,6 +22,7 @@ export interface BrowserSession {
   networkId: string;
   contract: any;
   publicDataProvider: ReturnType<typeof indexerPublicDataProvider>;
+  setPrivateState(value: NightSafePrivateState): Promise<void>;
 }
 
 function createInMemoryPrivateStateProvider() {
@@ -82,7 +82,7 @@ function deserializeFinalTx(tx: string) {
 }
 
 async function loadNightSafeContract() {
-  return import(/* @vite-ignore */ `${window.location.origin}/contracts/managed/nightsafe/contract/index.js`);
+  return import('../generated/nightsafe/index.js');
 }
 
 function requireServiceUrl(value: string, label: string, protocols: readonly string[]): string {
@@ -128,7 +128,7 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
 
   const zkConfigProvider = new FetchZkConfigProvider(zkBaseUrl, window.fetch.bind(window));
   const proofProvider = httpClientProofProvider(proofServerUrl, zkConfigProvider);
-  const publicDataProvider = indexerPublicDataProvider(indexerUrl, indexerWsUrl);
+  const publicDataProvider = indexerPublicDataProvider(indexerUrl, indexerWsUrl, WebSocket as never);
   const privateStateProvider = createInMemoryPrivateStateProvider();
 
   if (!CONTRACT_ADDRESS) {
@@ -173,7 +173,7 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
     compiledContract,
     contractAddress: CONTRACT_ADDRESS,
     privateStateId: CONTRACT_PRIVATE_STATE_ID,
-    initialPrivateState: createNightSafePrivateState(CONTRACT_INITIAL_PRIVATE_LIMIT),
+    initialPrivateState: createNightSafePrivateState(),
   } as any);
 
   return {
@@ -182,6 +182,7 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
     networkId: configuration.networkId,
     contract,
     publicDataProvider,
+    setPrivateState: (value) => privateStateProvider.set(CONTRACT_PRIVATE_STATE_ID, value),
   };
 }
 

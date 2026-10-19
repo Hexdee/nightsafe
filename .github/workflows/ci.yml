@@ -38,10 +38,13 @@ jobs:
         run: npm run preflight
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Compile Compact contract
-        run: compact compile --skip-zk contracts/nightsafe.compact contracts/managed/nightsafe
+        run: npm run compile
+
+      - name: Check TypeScript
+        run: npm run typecheck
 
       - name: Run tests
         run: npm test

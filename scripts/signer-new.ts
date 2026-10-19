@@ -1,0 +1,11 @@
+import { randomBytes } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { pureCircuits } from '../contracts/managed/nightsafe/contract/index.js';
+const path = process.argv[2];
+if (!path) throw new Error('Usage: npm run signer:new -- .nightsafe-private/alice.json');
+const secret = randomBytes(32);
+const publicKey = Buffer.from(pureCircuits.signerPublicKey(secret)).toString('hex');
+mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+writeFileSync(path, JSON.stringify({ version: 2, secret: secret.toString('hex'), publicKey }, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+console.log(`Signer created at ${path}. Keep that file private. Public key: ${publicKey}`);

@@ -1,10 +1,7 @@
-# NightSafe Proposal
+# NightSafe
 
-NightSafe is a private multisig treasury app for teams that need to manage shared funds safely on Midnight.
+A test-network treasury for teams on Midnight. V2 uses proofs from three registered signer keys, a threshold fixed by a private commitment, separate per-proposal approvals, and one-time execution of public unshielded payments from contract custody.
 
-It works like a privacy-preserving Safe or Squads style treasury: a group can approve important treasury actions together instead of relying on a single controller. The key difference is that sensitive details such as the approval threshold, treasury intent, and related metadata are kept confidential with Compact witnesses and Midnight proofs.
+Signer secrets and policy openings remain private. Registered keys, participation and payment details are public. The initial user hypothesis is small teams with recurring shared-budget approvals. Customer demand has not yet been validated.
 
-The product is meant for teams that want shared custody, stronger coordination, and less public exposure of their treasury operations.
-
-## Category
-Confidential DeFi
+See [submission copy](docs/submission/SUBMISSION.md), [checks and limits](docs/submission/VALIDATION.md) and [requirements](docs/submission/CHECKLIST.md).

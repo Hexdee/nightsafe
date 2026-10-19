@@ -1,3 +1,7 @@
+# V2 status
+
+The notes below describe earlier deployment attempts. For current V2 status, see [verification](submission/VALIDATION.md) and [network migration](NETWORKS.md). V2 requires a fresh deployment; the V1 address is incompatible.
+
 # Deployment Notes
 
 ## Current Target

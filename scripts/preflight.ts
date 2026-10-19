@@ -10,8 +10,8 @@ function fail(message: string): never {
 }
 
 const nodeVersion = process.versions.node;
-if (!nodeVersion.startsWith('22.')) {
-  fail(`Node.js 22 is required, but found ${nodeVersion}`);
+if (Number(nodeVersion.split('.')[0]) < 22) {
+  fail(`Node.js 22 or later is required, but found ${nodeVersion}`);
 }
 
 try {

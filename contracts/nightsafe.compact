@@ -1,41 +1,96 @@
-/*
-Public data in this contract is the auditable trail that the network should see:
-proposal counters, execution counters, and privacy-preserving commitments.
-
-Private data arrives through witnesses and circuit arguments. It stays off-chain
-unless it is deliberately disclosed. The circuit proves that a treasury action
-had enough approvals without revealing the approval threshold, the approval set,
-or the underlying treasury details.
-*/
-
 pragma language_version >= 0.23;
-
 import CompactStandardLibrary;
 
-export ledger proposalCount: Uint<64>;
-export ledger executedCount: Uint<64>;
-export ledger lastProposalCommitment: Bytes<32>;
-export ledger lastApprovalCommitment: Bytes<32>;
-
-witness approvalThreshold(): Uint<8>;
-
-constructor() {
-    proposalCount = 0 as Uint<64>;
-    executedCount = 0 as Uint<64>;
+export struct Transfer {
+  recipient: UserAddress;
+  color: Bytes<32>;
+  amount: Uint<128>;
+  memoCommitment: Bytes<32>;
 }
 
-export circuit authorizeMove(
-    proposalCommitment: Bytes<32>,
-    approvalCommitment: Bytes<32>,
-    approvalCount: Uint<8>,
-): [] {
-    const threshold = approvalThreshold();
+// Policy is fixed at deployment. Signer identities and unshielded payments
+// are public; the policy opening and signer secrets are private witnesses.
+export sealed ledger signerKeys: Vector<3, Bytes<32>>;
+export sealed ledger policyCommitment: Bytes<32>;
+export ledger proposalCount: Uint<64>;
+export ledger executedCount: Uint<64>;
+export ledger proposals: Map<Uint<64>, Transfer>;
+export ledger approvalCounts: Map<Uint<64>, Uint<8>>;
+export ledger approvals: Set<Bytes<32>>;
+export ledger executed: Set<Uint<64>>;
 
-    assert(threshold >= 2, "approval threshold must be at least two");
-    assert(approvalCount >= threshold, "not enough approvals");
+witness signerSecret(): Bytes<32>;
+witness approvalThreshold(): Uint<8>;
+witness policyNonce(): Bytes<32>;
 
-    proposalCount = disclose((proposalCount + 1) as Uint<64>);
-    executedCount = disclose((executedCount + 1) as Uint<64>);
-    lastProposalCommitment = disclose(proposalCommitment);
-    lastApprovalCommitment = disclose(approvalCommitment);
+constructor(keys: Vector<3, Bytes<32>>) {
+  assert(keys[0] != default<Bytes<32>>, "empty signer key");
+  assert(keys[1] != default<Bytes<32>>, "empty signer key");
+  assert(keys[2] != default<Bytes<32>>, "empty signer key");
+  assert(keys[0] != keys[1], "duplicate signer key");
+  assert(keys[0] != keys[2], "duplicate signer key");
+  assert(keys[1] != keys[2], "duplicate signer key");
+  const threshold = approvalThreshold();
+  assert(threshold >= 2, "threshold must be at least two");
+  assert(threshold <= 3, "threshold exceeds signer count");
+  assert(policyNonce() != default<Bytes<32>>, "policy nonce must be nonzero");
+  signerKeys = disclose(keys);
+  policyCommitment = persistentCommit<Uint<8>>(threshold, policyNonce());
+  proposalCount = 0;
+  executedCount = 0;
+}
+
+export pure circuit signerPublicKey(secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nightsafe:signer:v2"), secret]);
+}
+
+circuit authenticatedSigner(): Bytes<32> {
+  const secret = signerSecret();
+  assert(secret != default<Bytes<32>>, "signer secret must be nonzero");
+  const key = disclose(signerPublicKey(secret));
+  assert(key == signerKeys[0] || key == signerKeys[1] || key == signerKeys[2], "unauthorized signer");
+  return key;
+}
+
+export circuit propose(transfer: Transfer): [] {
+  authenticatedSigner();
+  assert(transfer.amount > 0, "amount must be positive");
+  assert(transfer.recipient.bytes != default<Bytes<32>>, "empty recipient");
+  assert(proposalCount < 18446744073709551615, "proposal counter exhausted");
+  const id = (proposalCount + 1) as Uint<64>;
+  proposals.insert(disclose(id), disclose(transfer));
+  approvalCounts.insert(disclose(id), 0);
+  proposalCount = disclose(id);
+}
+
+export circuit approve(id: Uint<64>): [] {
+  const key = authenticatedSigner();
+  assert(proposals.member(disclose(id)), "unknown proposal");
+  assert(!executed.member(disclose(id)), "proposal already executed");
+  const tag = persistentHash<[Bytes<32>, Uint<64>, Bytes<32>]>([pad(32, "nightsafe:approve:v2"), id, key]);
+  assert(!approvals.member(disclose(tag)), "signer already approved");
+  approvals.insert(disclose(tag));
+  approvalCounts.insert(disclose(id), (approvalCounts.lookup(disclose(id)) + 1) as Uint<8>);
+}
+
+export circuit deposit(color: Bytes<32>, amount: Uint<128>): [] {
+  assert(amount > 0, "amount must be positive");
+  receiveUnshielded(disclose(color), disclose(amount));
+}
+
+export circuit execute(id: Uint<64>): [] {
+  assert(proposals.member(disclose(id)), "unknown proposal");
+  assert(!executed.member(disclose(id)), "proposal already executed");
+  const threshold = approvalThreshold();
+  assert(threshold >= 2, "threshold must be at least two");
+  assert(threshold <= 3, "threshold exceeds signer count");
+  assert(persistentCommit<Uint<8>>(threshold, policyNonce()) == policyCommitment, "invalid treasury policy");
+  assert(approvalCounts.lookup(disclose(id)) >= threshold, "not enough approvals");
+  const transfer = proposals.lookup(disclose(id));
+  assert(unshieldedBalance(transfer.color) >= transfer.amount, "insufficient treasury balance");
+  // The ledger enforces this spend from contract custody to the exact stored
+  // recipient. No external transfer callback or caller-selected payout exists.
+  sendUnshielded(transfer.color, transfer.amount, right<ContractAddress, UserAddress>(transfer.recipient));
+  executed.insert(disclose(id));
+  executedCount = disclose((executedCount + 1) as Uint<64>);
 }

@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = path.join(root, 'contracts', 'managed', 'nightsafe');
 const target = path.join(root, 'public', 'contracts', 'managed', 'nightsafe');
-const browserAssetDirectories = ['compiler', 'contract', 'keys', 'zkir'] as const;
+const browserModule = path.join(root, 'src', 'generated', 'nightsafe');
+const browserAssetDirectories = ['compiler', 'keys', 'zkir'] as const;
 
 function copyRecursive(src: string, dst: string): void {
   const stat = fs.statSync(src);
@@ -21,7 +22,7 @@ function copyRecursive(src: string, dst: string): void {
 }
 
 if (!fs.existsSync(source)) {
-  if (!fs.existsSync(target)) {
+  if (!fs.existsSync(target) || !fs.existsSync(path.join(browserModule, 'index.js'))) {
     throw new Error(`Missing generated contract assets at ${source}`);
   }
   console.log(`Using checked-in browser assets at ${path.relative(root, target)}`);
@@ -29,6 +30,8 @@ if (!fs.existsSync(source)) {
 }
 
 fs.rmSync(target, { recursive: true, force: true });
+fs.rmSync(browserModule, { recursive: true, force: true });
+copyRecursive(path.join(source, 'contract'), browserModule);
 for (const directory of browserAssetDirectories) {
   const sourceDirectory = path.join(source, directory);
   if (fs.existsSync(sourceDirectory)) {

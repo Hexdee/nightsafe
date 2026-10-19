@@ -417,3 +417,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.ns-form { padding: 24px; }
+.ns-code { overflow-wrap: anywhere; font-family: monospace; font-size: 13px; line-height: 1.7; }
+.ns-proposal { padding: 24px; border-top: 1px solid var(--border, #29332d); }
+.ns-actions { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
+.transactions-card { margin-top: 24px; }
+@media (max-width: 760px) { .ns-form, .ns-proposal { padding: 16px; } }
+.ns-demo-log { line-height: 1.8; padding-left: 24px; }
+.ns-demo-log li { margin-top: 8px; }
+body { color: var(--ink); background: var(--canvas); }
+.transactions-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.transactions-card .section-heading { padding: 24px; gap: 20px; }
+.transactions-card h2 { font-size: 20px; }
+.transactions-card p { color: var(--muted); line-height: 1.6; }
+.transactions-card .ns-demo-log { color: var(--ink); }
+button:disabled { cursor: not-allowed; }
+@media (max-width: 760px) { .transactions-card .section-heading { padding: 16px; flex-direction: column; align-items: stretch; } }
