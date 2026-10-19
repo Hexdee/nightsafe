@@ -90,6 +90,7 @@ type SyncedState = Awaited<ReturnType<WalletContext['wallet']['waitForSyncedStat
 async function waitForWalletSync(walletCtx: WalletContext): Promise<SyncedState> {
   let diagnosticsDone = false;
   let diagnosticsRunning = false;
+  let lastCheckpoint = Date.now();
   const syncPromise = walletCtx.wallet.waitForSyncedState().finally(() => {
     diagnosticsDone = true;
   });
@@ -103,12 +104,21 @@ async function waitForWalletSync(walletCtx: WalletContext): Promise<SyncedState>
         const state = await Rx.firstValueFrom(walletCtx.wallet.state());
         const snapshot = {
           isSynced: state.isSynced,
+          progress: Object.fromEntries(['shielded', 'unshielded', 'dust'].map((kind) => [
+            kind, JSON.parse(JSON.stringify((state as any)[kind].progress, (_, value) =>
+              typeof value === 'bigint' ? value.toString() : value)),
+          ])),
           shieldedCoins: (state as any).shielded?.availableCoins?.length ?? 0,
           unshieldedCoins: (state as any).unshielded?.availableCoins?.length ?? 0,
           dustCoins: (state as any).dust?.availableCoins?.length ?? 0,
           dustReady: (state as any).dust?.balance?.(new Date())?.toString?.() ?? '0',
         };
         console.log(`\n  Sync diagnostics: ${JSON.stringify(snapshot)}`);
+        if (!diagnosticsDone && Date.now() - lastCheckpoint >= 60000) {
+          await persistWalletState(network, walletCtx);
+          lastCheckpoint = Date.now();
+          console.log('  Saved private sync checkpoint.');
+        }
       } catch (diagnosticErr) {
         console.log(`\n  Sync diagnostics error: ${diagnosticErr instanceof Error ? diagnosticErr.message : String(diagnosticErr)}`);
       } finally {

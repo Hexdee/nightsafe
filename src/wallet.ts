@@ -110,6 +110,8 @@ export async function createWallet(opts: CreateWalletOptions): Promise<WalletCon
       indexerHttpUrl: opts.networkConfig.indexer,
       indexerWsUrl: opts.networkConfig.indexerWS,
     },
+    // Batch verified history updates during a cold sync; no events are skipped.
+    batchUpdates: { size: 1000, timeout: 50, spacing: 1 },
     provingServerUrl: new URL(opts.networkConfig.proofServer),
     relayURL: new URL(opts.networkConfig.node.replace(/^http/, 'ws')),
     txHistoryStorage: new NoOpTransactionHistoryStorage(),

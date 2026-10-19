@@ -19,7 +19,7 @@ Our earlier assessment that the wave was closed came from the static schedule an
 | Apache 2.0 | Done | LICENSE and metadata published |
 | README covering setup, architecture and judging | Updated for V2 | Add live evidence once verified |
 | Pitch deck | Published | Seven-slide deck and public URL verified |
-| Demo/video pitch | Published | Narrated 3:25 pitch and public media links respond successfully |
+| Demo/video pitch | Published | Narrated four-minute pitch and public media links respond successfully |
 | Wave progress description | Ready in SUBMISSION.md | Implementation commit and actual local verification included |
 | Prior-wave change explanation | No prior entry | Clearly identify pre-existing August work |
 | Team, maximum five, individual registration | Hexdee appeared among registered builders | Confirm final team/entry details personally |
@@ -38,7 +38,7 @@ Our earlier assessment that the wave was closed came from the static schedule an
 - [x] Full compile including keys, 28 passing local tests, TypeScript check and build.
 - [ ] New Preprod deployment and recorded address.
 - [x] Local-network deposit, two distinct-key approvals and payout evidence recorded.
-- [ ] Equivalent public Preprod evidence (requires token).
+- [ ] Equivalent public Preprod evidence (token access verified; fresh wallet sync in progress).
 - [x] Public app updated to V2; production compiled-contract demo verified.
 - [x] V2 deck and video published; all three public asset/page URLs return HTTP 200.
 - [ ] Human AKINDO submission and receipt.
