@@ -29,7 +29,7 @@ Each participant runs `npm run signer:new -- .nightsafe-private/MY_NAME.json` an
 6. Supply the original policy opening to execute. A changed threshold or nonce must fail. With sufficient custody and quorum, execution sends the exact stored payment and marks the proposal consumed.
 7. Attempt a second execution and confirm rejection. Record the real transaction hashes and indexed before/after state.
 
-The policy is immutable. Approval participation and payment details are public. The threshold opening and signer secrets remain private witnesses. Downloaded signer backup files are unencrypted and must be protected.
+The deployment command relinquishes its maintenance authority before funding. Browser and CLI clients refuse an unlocked treasury. If that step is interrupted, use `npm run treasury:lock -- --network preprod` from the same private storage. The policy and verifier authority are then immutable. Approval participation and payment details are public. The threshold opening and signer secrets remain private witnesses. Downloaded signer backup files are unencrypted and must be protected.
 
 ## CLI path
 

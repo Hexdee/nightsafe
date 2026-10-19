@@ -38,7 +38,7 @@ export default function App() {
       <p className="privacy-note">Three registered signers. A fixed, committed threshold. Independent approvals for each payment.</p>
       <div className="sidebar-spacer" /><button className="wallet-pill" onClick={() => setWalletOpen(true)} disabled={m.calling}><WalletCards size={18} /><span>{m.session ? 'Wallet connected' : 'Connect wallet'}</span></button>
     </aside>
-    <main className="main" id="top"><header className="topbar"><strong>NightSafe Treasury</strong><span className="network-chip">{TARGET_NETWORK}</span></header>
+    <main className="main" id="top"><header className="topbar"><strong>NightSafe Treasury</strong><div className="ns-actions"><button className="secondary-button" disabled={m.calling} onClick={() => setWalletOpen(true)}>{m.session ? "Wallet connected" : "Connect wallet"}</button><span className="network-chip">{TARGET_NETWORK}</span></div></header>
       <div className="content"><section className="page-heading"><div><div className="eyebrow"><Fingerprint size={16} /> AUTHENTICATED APPROVALS</div><h1>Treasury overview</h1><p>Propose a payment, collect independent approvals, then execute once.</p></div>
         <button className="primary-button" disabled={!m.session || m.calling} onClick={() => setProposalOpen(true)}><Plus size={18} />Propose payment</button></section>
       {!CONTRACT_ADDRESS && <p className="error-banner">This V2 treasury needs a new deployment. The previous prototype address cannot accept these calls. See the setup guide in the repository.</p>}

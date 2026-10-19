@@ -135,6 +135,11 @@ export async function connectNightSafeSession(api: ConnectedAPI): Promise<Browse
     throw new Error('Set VITE_NIGHTSAFE_CONTRACT_ADDRESS after deploying NightSafe to Preprod.');
   }
   privateStateProvider.setContractAddress(CONTRACT_ADDRESS);
+  const deployedState = await publicDataProvider.queryContractState(CONTRACT_ADDRESS);
+  if (!deployedState || deployedState.maintenanceAuthority.committee.length !== 0 || deployedState.maintenanceAuthority.threshold !== 1) {
+    throw new Error('This treasury still has a maintenance authority. Complete the deployment lock before connecting or funding it.');
+  }
+
 
   const walletProvider = {
     getCoinPublicKey: () => shielded.shieldedCoinPublicKey,

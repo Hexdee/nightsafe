@@ -16,7 +16,9 @@ export async function createProviders(walletCtx: WalletContext, networkConfig: N
     const passwordPath = path.join(directory, 'storage-password');
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     if (!existsSync(passwordPath)) writeFileSync(passwordPath, randomBytes(32).toString('hex'), { mode: 0o600, flag: 'wx' });
-    privateStatePassword = readFileSync(passwordPath, 'utf8').trim();
+    // Prefix guarantees the SDK's character-class requirement; entropy comes
+    // from the 256-bit random suffix. Keep this derivation stable on reopen.
+    privateStatePassword = `Ns1!${readFileSync(passwordPath, 'utf8').trim()}`;
   }
   if (privateStatePassword.length < 16) throw new Error('PRIVATE_STATE_PASSWORD must contain at least 16 characters.');
 
@@ -26,14 +28,15 @@ export async function createProviders(walletCtx: WalletContext, networkConfig: N
     getCoinPublicKey: () => walletCtx.shieldedSecretKeys.coinPublicKey,
     getEncryptionPublicKey: () => walletCtx.shieldedSecretKeys.encryptionPublicKey,
     async balanceTx(tx: any, ttl?: Date) {
-      // balanceUnboundTransaction -> finalizeRecipe is the complete balancing
-      // path in wallet-sdk 1.x; the earlier explicit signRecipe step is gone.
+      // Sign the wallet-selected unshielded inputs before finalizing.
+      // DUST registration has its own already-signed path in deploy.ts.
       const recipe = await walletCtx.wallet.balanceUnboundTransaction(
         tx,
         { shieldedSecretKeys: walletCtx.shieldedSecretKeys, dustSecretKey: walletCtx.dustSecretKey },
         { ttl: ttl ?? new Date(Date.now() + 30 * 60 * 1000) },
       );
-      return walletCtx.wallet.finalizeRecipe(recipe);
+      const signed = await walletCtx.wallet.signRecipe(recipe, (data) => walletCtx.unshieldedKeystore.signData(data));
+      return walletCtx.wallet.finalizeRecipe(signed);
     },
     submitTx: (tx: any) => walletCtx.wallet.submitTransaction(tx) as any,
   };
@@ -54,4 +57,3 @@ export async function createProviders(walletCtx: WalletContext, networkConfig: N
     midnightProvider: walletProvider,
   };
 }
-

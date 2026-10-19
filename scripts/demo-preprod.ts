@@ -8,6 +8,7 @@ import { resolveNetwork, getOrCreateSeed, getDeployment } from '../src/network';
 import { createWallet, persistWalletState } from '../src/wallet';
 import { createProviders } from '../src/providers';
 import { loadTreasuryPolicy } from '../src/policy';
+import { isTreasuryLocked } from '../src/maintenance';
 import { witnesses } from '../src/witnesses';
 import { parseBytes32, commitMemo } from '../src/lib/treasury';
 import { resolve } from 'node:path';
@@ -37,6 +38,7 @@ try {
   const state = async () => {
     const current = await providers.publicDataProvider.queryContractState(deployment.address);
     if (!current) throw new Error('Contract state unavailable.');
+    if (!isTreasuryLocked(current.maintenanceAuthority)) throw new Error('Do not fund a treasury with an active maintenance authority.');
     return NightSafe.ledger(current.data);
   };
   const start = await state();
@@ -49,9 +51,12 @@ try {
     evidence.transactions.push({ action, hash: tx.public.txHash, id: tx.public.txId, blockHeight: tx.public.blockHeight });
     console.log(`${action} confirmed: ${tx.public.txHash}`);
   };
-  const reject = async (label: string, action: string, args: unknown[], secret: Uint8Array) => {
+  const reject = async (label: string, action: string, args: unknown[], secret: Uint8Array, expected: string) => {
     let rejected = false;
-    try { await call(action, args, secret); } catch { rejected = true; }
+    try { await call(action, args, secret); } catch (error) {
+      if (!String(error).includes(expected)) throw error;
+      rejected = true;
+    }
     if (!rejected) throw new Error(`${label} unexpectedly succeeded`);
     evidence.rejected.push(label);console.log(`${label}: rejected`);
   };
@@ -59,15 +64,22 @@ try {
   await call('deposit', [color, 1000000n], null);
   const memo = await commitMemo('NightSafe test-network payout');
   await call('propose', [{ recipient: { bytes: parseBytes32(recipient) }, color, amount: 100000n, memoCommitment: memo.commitment }], signers[0]);
-  await reject('Execution before quorum', 'execute', [1n], signers[0]);
+  await reject('Execution before quorum', 'execute', [1n], signers[0], 'not enough approvals');
   await call('approve', [1n], signers[0]);
-  await reject('Duplicate signer approval', 'approve', [1n], signers[0]);
+  await reject('Duplicate signer approval', 'approve', [1n], signers[0], 'signer already approved');
   await call('approve', [1n], signers[1]);
   await call('execute', [1n], null);
-  await reject('Second execution', 'execute', [1n], signers[1]);
+  await reject('Second execution', 'execute', [1n], signers[1], 'proposal already executed');
   const end = await state();
   if (!end.executed.member(1n) || end.executedCount !== 1n || end.approvalCounts.lookup(1n) !== 2n) throw new Error('Final indexed state mismatch.');
   evidence.final = { proposalCount: end.proposalCount.toString(), executedCount: end.executedCount.toString(), approvals: end.approvalCounts.lookup(1n).toString(), amount: '100000', executed: end.executed.member(1n) };
+  const finalContract = await providers.publicDataProvider.queryContractState(deployment.address);
+  if (!finalContract || !isTreasuryLocked(finalContract.maintenanceAuthority)) throw new Error('Final maintenance authority mismatch.');
+  const balances = [...finalContract.balance].map(([token, amount]) => ({ token, amount: amount.toString() }));
+  if (balances.length !== 1 || balances[0].amount !== '900000') throw new Error('Treasury custody must decrease by the exact payout.');
+  evidence.final.balances = balances;
+  evidence.verifiedAt = new Date().toISOString();
+  evidence.maintenanceAuthority = { committee: [], threshold: 1, counter: finalContract.maintenanceAuthority.counter.toString() };
   writeFileSync(network === 'preprod' ? 'docs/submission/PREPROD_EVIDENCE.json' : 'docs/submission/LOCAL_NETWORK_EVIDENCE.json', JSON.stringify(evidence, null, 2) + '\n');
   console.log('Public network evidence saved.');
 } finally { await persistWalletState(network, wallet);await wallet.wallet.stop(); }

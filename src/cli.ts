@@ -5,6 +5,7 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { loadTreasuryPolicy } from './policy';
 import { createProviders } from './providers';
+import { isTreasuryLocked } from './maintenance';
 import { parseBytes32, parseAmount, parseProposalId, commitMemo } from './lib/treasury';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -125,6 +126,8 @@ async function main() {
       initialPrivateState: privateState,
     });
 
+    const metadata = await providers.publicDataProvider.queryContractState(deployment.address);
+    if (!metadata || !isTreasuryLocked(metadata.maintenanceAuthority)) throw new Error('Complete the treasury maintenance lock before using or funding it.');
     await providers.privateStateProvider.set(PRIVATE_STATE_ID, privateState);
     console.log('  ✅ Connected!\n');
 

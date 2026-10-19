@@ -16,7 +16,7 @@ The treasury accepts unshielded deposits and executes the stored transfer from c
 
 ## What changed in Wave 2
 
-The pre-existing August prototype only compared a self-reported count against a caller-supplied threshold. It did not authenticate signers or transfer tokens. On 19 October we replaced that contract with immutable signer registration, a committed private policy, independent approval transactions, replay protection and unshielded custody/payment operations. We rewired the browser and CLI, generated matching proof assets, and added a 25-check suite covering positive flows and attacks.
+The pre-existing August prototype only compared a self-reported count against a caller-supplied threshold. It did not authenticate signers or transfer tokens. On 19 October we replaced that contract with immutable signer registration, a committed private policy, independent approval transactions, replay protection and unshielded custody/payment operations. We rewired the browser and CLI, generated matching proof assets, and added a 28-check suite covering positive flows and attacks.
 
 We did not enter Wave 1. These are new changes to an existing codebase, not a claim that the entire project was created this wave. The live AKINDO page shows a 19 October deadline, differing from the static October 17 schedule. The final commit and network evidence must accompany this description.
 
@@ -30,7 +30,7 @@ Signer secrets and the threshold opening are private witnesses. Registered publi
 
 ## Verification and limitations
 
-Full Compact compilation generates four circuits and matching proving assets. Twenty-two contract/input tests and three network-configuration tests cover unauthorized signers, duplicate approvals/keys, policy tampering, proposal isolation, replay, exact payout effects, insufficient custody and input handling. Local effects are not a substitute for a successful network transaction. Add the actual deployment/transaction evidence from VALIDATION.md when available.
+Full Compact compilation generates four circuits and matching proving assets. Twenty-two contract/input tests, three network-configuration tests and three maintenance-authority tests cover unauthorized signers, duplicate approvals/keys, policy tampering, proposal isolation, replay, exact payout effects, insufficient custody and input handling. The deployment workflow permanently locks the maintenance authority, and clients reject unlocked deployments. Local effects are not a substitute for a successful network transaction. A local Docker network run also confirmed a deposit, proposal, two distinct-key approvals and payout with real proofs. Early execution, duplicate approval and replay were rejected. Transaction hashes and block heights are in docs/submission/LOCAL_NETWORK_EVIDENCE.json. The local treasury maintenance lock is verified. One operator controlled the two test signer files; public Preprod deployment is still pending.
 
 V2 supports exactly three signer keys and a fixed policy. It has no key rotation, recovery or cancellation and has not received an independent security audit. It is intended for test assets. Distinct cryptographic keys do not prove distinct humans.
 
@@ -41,10 +41,11 @@ The next product validation step is interviews and supervised trials with small 
 ## Links
 
 - Repository: https://github.com/Hexdee/nightsafe
-- Frontend: https://nightsafe.vercel.app (verify V2 deployment before submitting)
-- Deck: https://nightsafe.vercel.app/submission/NightSafe-Wave2-Pitch.pptx (verify public availability before entry)
-- Video pitch: https://nightsafe.vercel.app/submission/ (synthetic narration and real local circuit results; verify public availability before entry)
-- Contract, final commit and live transaction evidence: pending verification
+- Frontend: https://nightsafe.vercel.app (V2 browser simulation verified)
+- Deck: https://nightsafe.vercel.app/submission/NightSafe-Wave2-Pitch.pptx
+- Video pitch: https://nightsafe.vercel.app/submission/ (synthetic narration and real local circuit results)
+- Local contract and transaction evidence: https://github.com/Hexdee/nightsafe/blob/main/docs/submission/LOCAL_NETWORK_EVIDENCE.json
+- Public Preprod contract: pending; no public settlement claimed
 - Team: entrant confirms final members and individual registration
 
 The entrant must personally submit through AKINDO and save the receipt. No entry has been submitted by this assistant.

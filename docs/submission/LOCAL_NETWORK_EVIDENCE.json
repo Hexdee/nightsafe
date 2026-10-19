@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "network": "undeployed",
+  "contract": "e75f23aad2c86f3f0c17523c79e94fb6b4957006c63a2327bac79cbcb749778c",
+  "recordedAt": "2026-10-19T11:55:53.457Z",
+  "signerKeys": [
+    "049cc86b398c655e3a82078344d9bbd267d7043c5b71c54de868873a0a1792b6",
+    "5b73289406968212af8943450bfa90d68b0351d2ce7971ac7d10dd275c9c4071"
+  ],
+  "recipient": "bc610dd07c52f59012a88c2f9f1c5f34cbacc75b868202975d6f19beaf37284b",
+  "transactions": [
+    {
+      "action": "deposit",
+      "hash": "2f3ffc2a9deb9fb9f8987f5f8f3edc25bd7606329ba9ca620f3c7ec63adc7e40",
+      "id": "002bb8539c261af24584140cb6b41c0d97aa62a344794bb5b3448e5688bf05c504",
+      "blockHeight": 463
+    },
+    {
+      "action": "propose",
+      "hash": "e334c608a8445fe0dbd95edf326ffaff8fd7721d93c564c4a85d41aaac9b5312",
+      "id": "000925d826c562e61dd806d59066ef37efc5463ff91125d71faaf16531ae32a66b",
+      "blockHeight": 469
+    },
+    {
+      "action": "approve",
+      "hash": "e555a7bff172d71c9ce0af306e466b11a4754d9387ffefdbb3f28635cc709b3b",
+      "id": "00bba850f2d43b4174d3686f03399db20f81fe33b14eb36b8a3b6bcfcd1edb8adf",
+      "blockHeight": 477
+    },
+    {
+      "action": "approve",
+      "hash": "b5ded66ac04e5a668e80b5e2cfdc76766623eff5f71263b56d7ee38a928f0909",
+      "id": "00c5c8c6612cc6bbf929eccfac69952afc1e5a8b6ab47664367bae192e86020c2f",
+      "blockHeight": 486
+    },
+    {
+      "action": "execute",
+      "hash": "a4ff04ab2c550db23b534c7f644d2c9d0b7c161ecb3bc0f98f60a194a4568a85",
+      "id": "00385aa30211655c411acd9cd2d5e07c44024106cfa70d54cd4a7d0f6744523f1a",
+      "blockHeight": 491
+    }
+  ],
+  "rejected": [
+    "Execution before quorum",
+    "Duplicate signer approval",
+    "Second execution"
+  ],
+  "baseline": "August prototype; V2 implemented 19 October 2026",
+  "final": {
+    "proposalCount": "1",
+    "executedCount": "1",
+    "approvals": "2",
+    "amount": "100000",
+    "executed": true,
+    "balances": [
+      {
+        "token": {
+          "tag": "unshielded",
+          "raw": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "amount": "900000"
+      }
+    ]
+  },
+  "verifiedAt": "2026-10-19T12:01:25.886Z",
+  "maintenanceAuthority": {
+    "committee": [],
+    "threshold": 1,
+    "counter": "1"
+  }
+}

@@ -14,12 +14,12 @@ Our earlier assessment that the wave was closed came from the static schedule an
 | --- | --- | --- |
 | Submit before live deadline | Open at inspection | Human entrant must complete entry and save receipt |
 | Material Midnight progress during applicable wave | V2 implemented on 19 October | Publish exact commit, describe August baseline separately; no backdating |
-| Public GitHub repository | Existing public repo | V2 and preparation files are ready for publication |
+| Public GitHub repository | Existing public repo | V2 published on main; final hardening/evidence follow-up prepared |
 | GitHub midnightntwrk label | Done | Repository topic saved and verified on GitHub |
-| Apache 2.0 | Prepared | LICENSE and metadata aligned locally |
+| Apache 2.0 | Done | LICENSE and metadata published |
 | README covering setup, architecture and judging | Updated for V2 | Add live evidence once verified |
 | Pitch deck | V2 ready | Seven-slide deck and public hosting copy prepared |
-| Demo/video pitch | Ready locally | Narrated 3:25 pitch includes verified browser simulation; publish hosting copy |
+| Demo/video pitch | Published | Narrated 3:25 pitch and public media links respond successfully |
 | Wave progress description | Prepared in SUBMISSION.md | Attach final commit and actual verification results |
 | Prior-wave change explanation | No prior entry | Clearly identify pre-existing August work |
 | Team, maximum five, individual registration | Hexdee appeared among registered builders | Confirm final team/entry details personally |
@@ -31,14 +31,16 @@ Our earlier assessment that the wave was closed came from the static schedule an
 - [x] Immutable three-signer policy and private committed threshold.
 - [x] Registered-key authentication and separate per-proposal approvals.
 - [x] Duplicate approval prevention and one-time execution.
+- [x] Maintenance authority lock workflow and client rejection of unlocked deployments.
 - [x] Real unshielded deposit and payout operations in Compact.
 - [x] Browser controls for proposing, approving, funding and execution.
 - [x] Randomized memo commitments and explicit public-payment boundary.
-- [x] Full compile including keys, 25 passing local tests, TypeScript check and build.
+- [x] Full compile including keys, 28 passing local tests, TypeScript check and build.
 - [ ] New Preprod deployment and recorded address.
-- [ ] Live deposit, independent-key approvals and payout evidence.
-- [ ] Public app updated to V2.
-- [x] V2 deck and video prepared; public link verification follows publication.
+- [x] Local-network deposit, two distinct-key approvals and payout evidence recorded.
+- [ ] Equivalent public Preprod evidence (requires token).
+- [x] Public app updated to V2; production compiled-contract demo verified.
+- [x] V2 deck and video published; all three public asset/page URLs return HTTP 200.
 - [ ] Human AKINDO submission and receipt.
 
 The published rules summary says entries must be submitted personally and prohibits automated entry tools. Code, assets and copy can be prepared here; the entrant must perform final entry. No X account or minimum commit count was found among this Buildathon's requirements. No official video duration limit was verified.

@@ -16,6 +16,7 @@ import { WebSocket } from 'ws';
 import * as Rx from 'rxjs';
 import { loadTreasuryPolicy } from './policy';
 import { createProviders } from './providers';
+import { lockTreasury } from './maintenance';
 
 // Midnight SDK imports
 import { deployContract } from '@midnight-ntwrk/midnight-js-contracts';
@@ -375,6 +376,9 @@ async function main() {
 
   recordDeployment(network, contractAddress, address.toString());
   console.log('  Saved to .midnight-state.json\n');
+  console.log('  Permanently relinquishing the deployment maintenance authority before funding...');
+  await lockTreasury(providers, contractAddress);
+  console.log('  Verified: empty maintenance committee with threshold one.');
 
   await persistWalletState(network, walletCtx);
   await walletCtx.wallet.stop();

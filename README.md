@@ -24,7 +24,7 @@ Signer authentication uses Compact proofs of secret-key knowledge. These are sep
 | Optional note | Stays in the form; only its hash with fresh random salt reaches the ledger |
 | Counters and executed proposal IDs | Public |
 
-Approval counts can reveal an upper bound on the threshold. A two-or-three threshold has a small domain, so its blinding nonce must remain secret. The note is not encrypted or saved by the form. There is no claim that payment amounts or signer identities are hidden. Key rotation, policy changes, cancellation and recovery are not implemented. This release has not received an independent security audit and is intended for test assets.
+The configured proof server receives witness material; use a trusted local server. Approval counts can reveal an upper bound on the threshold. A two-or-three threshold has a small domain, so its blinding nonce must remain secret. The note is not encrypted or saved by the form. There is no claim that payment amounts or signer identities are hidden. Key rotation, policy changes, cancellation and recovery are not implemented. This release has not received an independent security audit and is intended for test assets.
 
 ## Setup and checks
 
@@ -41,7 +41,7 @@ npm run dev
 
 Full compilation generates matching prover/verifier keys and binary ZKIR for propose, approve, deposit and execute. The frontend bundles generated contract code through Vite and serves proof assets from public/contracts/managed/nightsafe. Do not combine a new ABI with keys from an older compile.
 
-The 25-check test suite checks quorum authentication, duplicate keys/approvals, tampered policy openings, proposal isolation, replay rejection, exact payout effects, insufficient custody and parsing. Local runtime evaluations and transfer effects are not by themselves evidence of a successful network transaction.
+The 28-check test suite checks quorum authentication, duplicate keys/approvals, tampered policy openings, proposal isolation, replay rejection, exact payout effects, insufficient custody and parsing. Local runtime evaluations and transfer effects are not by themselves evidence of a successful network transaction.
 
 ## Deploy a treasury
 
@@ -89,3 +89,7 @@ The live AKINDO page inspected on 19 October shows Wave 2 still building, a dead
 ## License
 
 [Apache License 2.0](LICENSE). Third-party dependencies retain their own licenses.
+
+## Fixed deployment authority
+
+The deployment command relinquishes its maintenance key and verifies an empty maintenance committee with threshold one before declaring success. Browser and CLI access reject a treasury that is still upgradable. This prevents a deployment administrator from replacing verifier keys to bypass quorum. If deployment succeeds but locking is interrupted, run `npm run treasury:lock -- --network undeployed` (or `preprod`) using the same private storage before funding. The lock is permanent; there is no upgrade or recovery key.
