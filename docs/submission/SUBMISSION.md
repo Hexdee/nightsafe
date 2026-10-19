@@ -18,7 +18,7 @@ The treasury accepts unshielded deposits and executes the stored transfer from c
 
 The pre-existing August prototype only compared a self-reported count against a caller-supplied threshold. It did not authenticate signers or transfer tokens. On 19 October we replaced that contract with immutable signer registration, a committed private policy, independent approval transactions, replay protection and unshielded custody/payment operations. We rewired the browser and CLI, generated matching proof assets, and added a 28-check suite covering positive flows and attacks.
 
-We did not enter Wave 1. These are new changes to an existing codebase, not a claim that the entire project was created this wave. The live AKINDO page shows a 19 October deadline, differing from the static October 17 schedule. The final commit and network evidence must accompany this description.
+We did not enter Wave 1. These are new changes to an existing codebase, not a claim that the entire project was created this wave. The live AKINDO page shows a 19 October deadline, differing from the static October 17 schedule. Implementation commit: https://github.com/Hexdee/nightsafe/commit/92d4986. Its GitHub checks passed clean install, full Compact compilation, TypeScript, all 28 tests and the production build.
 
 ## Why Midnight
 

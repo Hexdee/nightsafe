@@ -13,14 +13,14 @@ Our earlier assessment that the wave was closed came from the static schedule an
 | Requirement | Current status | Remaining work |
 | --- | --- | --- |
 | Submit before live deadline | Open at inspection | Human entrant must complete entry and save receipt |
-| Material Midnight progress during applicable wave | V2 implemented on 19 October | Publish exact commit, describe August baseline separately; no backdating |
-| Public GitHub repository | Existing public repo | V2 published on main; final hardening/evidence follow-up prepared |
+| Material Midnight progress during applicable wave | V2 implemented on 19 October | Implementation commit 92d4986 published; August baseline described separately |
+| Public GitHub repository | Existing public repo | Published: implementation commit 92d4986, with local-network transaction evidence |
 | GitHub midnightntwrk label | Done | Repository topic saved and verified on GitHub |
 | Apache 2.0 | Done | LICENSE and metadata published |
 | README covering setup, architecture and judging | Updated for V2 | Add live evidence once verified |
-| Pitch deck | V2 ready | Seven-slide deck and public hosting copy prepared |
+| Pitch deck | Published | Seven-slide deck and public URL verified |
 | Demo/video pitch | Published | Narrated 3:25 pitch and public media links respond successfully |
-| Wave progress description | Prepared in SUBMISSION.md | Attach final commit and actual verification results |
+| Wave progress description | Ready in SUBMISSION.md | Implementation commit and actual local verification included |
 | Prior-wave change explanation | No prior entry | Clearly identify pre-existing August work |
 | Team, maximum five, individual registration | Hexdee appeared among registered builders | Confirm final team/entry details personally |
 | Eligibility/rules acceptance | Entrant action | Read binding rules and confirm required eligibility |
@@ -48,3 +48,5 @@ The published rules summary says entries must be submitted personally and prohib
 ## Security and product limits
 
 Exactly three signers, fixed policy, no key rotation or recovery. Signer participation, recipients and amounts are public. The threshold opening must remain private. Distinct keys are not proof of distinct humans. Tests inspect local contract execution and payout effects; live evidence is separate. See VALIDATION.md for current results and open issues.
+
+Implementation reference: [92d4986](https://github.com/Hexdee/nightsafe/commit/92d4986). Its remote checks passed clean install, full Compact compile, TypeScript, 28 tests and production build. Public Preprod deployment and the personal AKINDO receipt remain outstanding.
